@@ -1,7 +1,8 @@
-using JSON, UnitfulPlots, Plots
-#plotlyjs()
-gr()
-include("ImagineInterface.jl")
+using JSON, AxisArrays, UnitfulPlots, Plots
+using ImagineInterface
+
+plotlyjs()
+#gr()
 
 d = JSON.parsefile("controls_triangle.json")
 pos = parse_command(d, "positioner1")

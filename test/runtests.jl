@@ -1,7 +1,7 @@
 using Base.Test
 
 using JSON, Unitful, AxisArrays
-include("../ImagineInterface.jl")
+include("../src/ImagineInterface.jl")
 using ImagineInterface
 
 #test reading

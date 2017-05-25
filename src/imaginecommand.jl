@@ -51,7 +51,7 @@ sequence_names(com::ImagineCommand) = com.sequence_names
 sequence_lookup(com::ImagineCommand) = com.sequence_lookup
 
 #In the JSON arrays, waveforms and counts-of-waves are specified in alternating order: count,wave,count,wave...
-function ImagineCommand(chan_name::String, seqs_compressed, is_digital::Bool, seqs_lookup::Dict; rawtype=Nullable(Any,true))
+function ImagineCommand(chan_name::String, seqs_compressed, is_digital::Bool, seqs_lookup::Dict; rawtype=Any)
     @assert iseven(length(seqs_compressed))
     seqlist = []
     seqnames = String[]
@@ -61,7 +61,7 @@ function ImagineCommand(chan_name::String, seqs_compressed, is_digital::Bool, se
             push!(seqnames, seqs_compressed[i+1])
         end
     end
-    typ = isnull(rawtype) ? default_rawtype(is_digital) : rawtype
+    typ = rawtype==Any ? default_rawtype(is_digital) : rawtype
     return ImagineCommand(chan_name, seqlist, seqnames, seqs_lookup, typ, is_digital)
 end
 

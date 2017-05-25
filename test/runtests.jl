@@ -35,7 +35,7 @@ axs = axes(sampsa)
 @test length(axs) == 1
 axsv = axisvalues(axs[1])
 @test length(axsv) == 1
-@test axsv[1] == Ranges.linspace(0.0*Unitful.s,7.8749*Unitful.s,78750)
+@test axsv[1] == linspace(0.0*Unitful.s,7.8749*Unitful.s,78750)
 
 #voltage-mapped, analog
 sampsa = decompress(pos, 1, nsamps; sampmap=:volts)
@@ -60,7 +60,7 @@ sampsd = decompress(las1, 1, nsamps; sampmap=:raw)
 digs = getdigital(allcoms)
 @test all(map(isdigital, digs))
 angs = getanalog(allcoms)
-@test all(!map(isdigital, angs))
+@test all(map(!, map(isdigital, angs)))
 
 #ImagineCommand
 #emptycommand(true)

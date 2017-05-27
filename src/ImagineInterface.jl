@@ -1,15 +1,16 @@
 module ImagineInterface
 
 using JSON, Unitful
-using MappedArrays, AxisArrays
+using MappedArrays, AxisArrays, IntervalSets
 
-import Base.show, Base.length, Base.size, Base.isempty
+import Base.show, Base.length, Base.size, Base.isempty, Base.==
 
-include("constants.jl")
 include("unitfactory.jl")
 include("imaginecommand.jl")
-include("parse.jl")
+include("constants.jl")
 include("convenience.jl")
+include("parse.jl")
+include("write.jl")
 
 #imaginecommand.jl
 export ImagineCommand,
@@ -24,13 +25,23 @@ export ImagineCommand,
 #	isempty,	
         decompress
 
-#parse.jl
-export parse_command,
-        parse_commands
+#constants.jl
+export rigtemplate
 
 #convenience.jl
 export getname,
         getdigital,
-        getanalog
+        getanalog,
+        getpositioners,
+        getcameras,
+        getlasers,
+        getstimuli
+
+#parse.jl
+export parse_command,
+        parse_commands
+
+#write.jl
+export write_commands
 
 end #module

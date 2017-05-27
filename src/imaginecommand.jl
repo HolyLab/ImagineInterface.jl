@@ -1,26 +1,24 @@
-type ImagineCommand #{T,A,F} <: AbstractArray{T,1}
+type ImagineCommand
     chan_name::String
     sequences::Array
     sequence_names::Vector{String}
     sequence_lookup::Dict
-    rawtype::DataType
     cumlength::Array{Int64,1}
-    is_digital::Bool
     fac::UnitFactory
 end
 
-function default_rawtype(is_digital::Bool)
-    if !is_digital
-        return UInt16
-    else
-        return Bool
-    end
-end
-
-function empty_command(is_digital::Bool; chan_name="default", time_per_sample = 1e-4*Unitful.s)
-    rawtype = is_digital ? Bool : UInt16
-    return ImagineCommand(chan_name, [], String[], Dict(), rawtype, Int64[], is_digital, default_unitfactory(is_digital, rawtype; time_per_sample = time_per_sample))
-end
+#function default_rawtype(is_digital::Bool)
+#    if !is_digital
+#        return UInt16
+#    else
+#        return Bool
+#    end
+#end
+#
+#function empty_command(is_digital::Bool; chan_name="default", time_per_sample = 1e-4*Unitful.s)
+#    rawtype = is_digital ? Bool : UInt16
+#    return ImagineCommand(chan_name, [], String[], Dict(), rawtype, Int64[], is_digital, default_unitfactory(is_digital, rawtype; time_per_sample = time_per_sample))
+#end
 
 function show(io::IO, com::ImagineCommand)
     if isdigital(com)
@@ -35,7 +33,7 @@ function show(io::IO, com::ImagineCommand)
         print(io, " encoding values from $(com.fac.worldmin) to $(com.fac.worldmax)\n")
     end
     print(io, "           Channel name: $(name(com))\n")
-    print(io, "               Raw type: $(com.rawtype)\n")
+    print(io, "               Raw type: $(rawtype(com))\n")
     print(io, "      Duration(samples): $(length(com))\n")
     print(io, "      Duration(seconds): $(length(com)*com.fac.time_interval)")
 end
@@ -44,14 +42,29 @@ end
 Base.length(com::ImagineCommand) = isempty(com) ? 0 : com.cumlength[end]
 Base.size(C::ImagineCommand)    = length(C)
 Base.isempty(com::ImagineCommand) = isempty(com.sequences)
+function ==(com1::ImagineCommand, com2::ImagineCommand)
+    eq = true
+    for nm in fieldnames(com1)
+        if getfield(com1, nm) != getfield(com2, nm)
+            eq = false
+            break
+        end
+    end
+    return eq
+end
+
+
 name(com::ImagineCommand) = com.chan_name
-rawtype(com::ImagineCommand) = com.rawtype
-isdigital(com::ImagineCommand) = com.is_digital
+rawtype(com::ImagineCommand) = typeof(com.fac.rawmin)
+isdigital(com::ImagineCommand) = typeof(com.fac.worldmin) == Bool
 sequence_names(com::ImagineCommand) = com.sequence_names
 sequence_lookup(com::ImagineCommand) = com.sequence_lookup
+#assumes rate is in samples per second
+sample_rate(com::ImagineCommand) = sample_rate(com.fac)
+set_sample_rate!(com::ImagineCommand, r::Int) = set_sample_rate!(com.fac, r)
 
 #In the JSON arrays, waveforms and counts-of-waves are specified in alternating order: count,wave,count,wave...
-function ImagineCommand(chan_name::String, seqs_compressed, is_digital::Bool, seqs_lookup::Dict; rawtype=Any)
+function ImagineCommand(rig_name::String, chan_name::String, seqs_compressed, seqs_lookup::Dict, samprate::Int)
     @assert iseven(length(seqs_compressed))
     seqlist = []
     seqnames = String[]
@@ -61,11 +74,10 @@ function ImagineCommand(chan_name::String, seqs_compressed, is_digital::Bool, se
             push!(seqnames, seqs_compressed[i+1])
         end
     end
-    typ = rawtype==Any ? default_rawtype(is_digital) : rawtype
-    return ImagineCommand(chan_name, seqlist, seqnames, seqs_lookup, typ, is_digital)
+    return ImagineCommand(rig_name, chan_name, seqlist, seqnames, seqs_lookup, samprate)
 end
 
-function ImagineCommand(chan_name::String, seqs, seqnames::Vector{String}, seqs_lookup::Dict, rawtype::DataType, is_digital::Bool)
+function ImagineCommand(rig_name::String, chan_name::String, seqs, seqnames::Vector{String}, seqs_lookup::Dict, samprate::Int)
     nwaves = length(seqs)
     cumlength = zeros(Int64, nwaves)
     if nwaves > 0
@@ -74,7 +86,7 @@ function ImagineCommand(chan_name::String, seqs, seqnames::Vector{String}, seqs_
             cumlength[s] = cumlength[s-1] + sum(view(seqs[s], 1:2:length(seqs[s])))
         end
     end
-    return ImagineCommand(chan_name, seqs, seqnames, seqs_lookup, rawtype, cumlength, is_digital, default_unitfactory(is_digital, rawtype))
+    return ImagineCommand(chan_name, seqs, seqnames, seqs_lookup, cumlength, default_unitfactory(rig_name, chan_name; samprate = samprate))
 end
 
 function decompress(com::ImagineCommand, tstart::Unitful.Time, tstop::Unitful.Time; sampmap=:world)

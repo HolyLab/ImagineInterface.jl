@@ -5,9 +5,16 @@ end
 
 function parse_commands(d::Dict)
     output = ImagineCommand[]
-    for (typ_key,is_dig) in zip((ANALOG_KEY, DIGITAL_KEY), (false, true))
+    #rig = d[METADATA_KEY]["rig"]
+    #TODO: remove this when rig gets added to the metadata
+    if haskey(d[METADATA_KEY], "rig")
+        rig = d[METADATA_KEY]["rig"]
+    else
+        rig = "ocpi2"
+    end
+    for typ_key in (ANALOG_KEY, DIGITAL_KEY)
         for k in keys(d[typ_key])
-            push!(output, ImagineCommand(k, d[typ_key][k], is_dig, d[COMPONENT_KEY]))
+            push!(output, ImagineCommand(rig, k, d[typ_key][k], d[COMPONENT_KEY], Int64(d[METADATA_KEY]["sample rate"])))
         end
     end
     return output
@@ -19,14 +26,18 @@ function parse_command(filename::String, comname::String)
 end
 
 function parse_command(d::Dict, comname::String)
-    for sigtype in (ANALOG_KEY, DIGITAL_KEY)
-        ad = d[sigtype]
+    #rig = d[METADATA_KEY]["rig"]
+    #TODO: remove this when rig gets added to the metadata
+    if haskey(d[METADATA_KEY], "rig")
+        rig = d[METADATA_KEY]["rig"]
+    else
+        rig = "ocpi2"
+    end
+
+    for typ_key in (ANALOG_KEY, DIGITAL_KEY)
+        ad = d[typ_key]
         if haskey(ad, comname)
-            if sigtype == ANALOG_KEY
-                return ImagineCommand(comname, ad[comname], false, d[COMPONENT_KEY])
-            else
-                return ImagineCommand(comname, ad[comname], true, d[COMPONENT_KEY])
-            end
+            return ImagineCommand(rig, comname, ad[comname], d[COMPONENT_KEY], Int64(d[METADATA_KEY]["sample rate"]))
         end
     end
     error("Command signal name not found")

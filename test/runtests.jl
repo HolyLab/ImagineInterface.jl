@@ -53,7 +53,7 @@ sampsd = decompress(las1, 1, nsamps; sampmap=:volts)
 @test unit(sampsd[1]) == Unitful.V
 
 sampsd = decompress(las1, 1, nsamps; sampmap=:raw)
-@test eltype(sampsd) == rawtype(las1) #Bool by default
+@test eltype(sampsd) == rawtype(las1) #UInt8 by default
 
 
 #convenience
@@ -62,9 +62,15 @@ digs = getdigital(allcoms)
 angs = getanalog(allcoms)
 @test all(map(!, map(isdigital, angs)))
 
-#ImagineCommand
-#emptycommand(true)
-#emptycommand(false)
+#write
+outname = "test.json"
+write_commands(outname, "ocpi2", allcoms)
+allcoms2 = parse_commands(outname)
+sp = sortperm(map(name,allcoms)) #sort alphabetically to compare
+sp2 = sortperm(map(name,allcoms2))
+@test allcoms[sp] == allcoms2[sp]
+rm(outname)
 
+#ImagineCommand
 #UnitFactory
 #default_unitfactory

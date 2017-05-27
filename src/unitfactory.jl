@@ -13,7 +13,12 @@ end
 raw2volts{Traw,TW,TT}(fac::UnitFactory{Traw,TW,TT}) = x -> fac.voltmin + ((x-fac.rawmin)/(fac.rawmax-fac.rawmin))*(fac.voltmax-fac.voltmin)
 volts2world{Traw,TW,TT}(fac::UnitFactory{Traw,TW,TT}) = x -> fac.worldmin + ((x-fac.voltmin)/(fac.voltmax-fac.voltmin))*(fac.worldmax-fac.worldmin)
 world2volts{Traw,TW,TT}(fac::UnitFactory{Traw,TW,TT}) = x -> fac.voltmin + ((x-fac.worldmin)/(fac.worldmax-fac.worldmin))*(fac.voltmax-fac.voltmin)
-volts2raw{Traw,TW,TT}(fac::UnitFactory{Traw,TW,TT}) = x -> fac.rawmin + ((x-fac.voltmin)/(fac.voltmax-fac.voltmin))*(fac.rawmax-fac.rawmin)
+volts2raw{Traw,TW,TT}(fac::UnitFactory{Traw,TW,TT}) = x -> round(rawtype(fac), fac.rawmin + ((x-fac.voltmin)/(fac.voltmax-fac.voltmin))*(fac.rawmax-fac.rawmin))
+world2raw{Traw,TW,TT}(fac::UnitFactory{Traw,TW,TT}) = x -> volts2raw(fac)(world2volts(fac)(x))
+raw2world{Traw,TW,TT}(fac::UnitFactory{Traw,TW,TT}) = x -> volts2world(fac)(raw2volts(fac)(x))
+
+rawtype(uf::UnitFactory) = typeof(uf.rawmin)
+worldtype(uf::UnitFactory) = typeof(uf.worldmin)
 
 interval_raw(uf::UnitFactory) = ClosedInterval(uf.rawmin, uf.rawmax)
 interval_volts(uf::UnitFactory) = ClosedInterval(uf.voltmin, uf.voltmax)

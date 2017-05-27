@@ -61,6 +61,10 @@ digs = getdigital(allcoms)
 @test all(map(isdigital, digs))
 angs = getanalog(allcoms)
 @test all(map(!, map(isdigital, angs)))
+#getcameras
+#getlasers
+#getpositioners
+#getstimuli
 
 #write
 outname = "test.json"
@@ -71,6 +75,58 @@ sp2 = sortperm(map(name,allcoms2))
 @test allcoms[sp] == allcoms2[sp]
 rm(outname)
 
-#ImagineCommand
-#UnitFactory
-#default_unitfactory
+#build commands from template
+ocpi2 = rigtemplate("ocpi2"; samprate = 20000)
+@test sample_rate(ocpi2[1]) == 20000
+@test all(x->x==0, map(length, ocpi2))
+
+#append!
+pos = getpositioners(ocpi2)[1]
+rawdat = UInt16[0:typemax(UInt16)...]
+append!(pos, "ramp_up", rawdat)
+dat = decompress(pos, "ramp_up")
+@test dat[1] == pos.fac.worldmin
+@test dat[end] == pos.fac.worldmax
+append!(pos, "ramp_up") #append existing
+@test length(pos) == 2*typemax(UInt16)+2
+
+#replace!
+rawdat2 = UInt16[typemax(UInt16):-1:0...]
+replace!(pos, "ramp_up", rawdat2)
+dat = decompress(pos, "ramp_up")
+@test dat[end] == pos.fac.worldmin
+@test dat[1] == pos.fac.worldmax
+rawdat3 = UInt16[0;0;typemax(UInt16)] #change length
+replace!(pos, "ramp_up", rawdat3)
+dat = decompress(pos, "ramp_up")
+@test dat[1] == pos.fac.worldmin
+@test dat[3] == pos.fac.worldmax
+@test length(pos) == 6
+
+#pop!
+pop!(pos)
+dat = decompress(pos, "ramp_up")
+@test dat[1] == pos.fac.worldmin
+@test dat[3] == pos.fac.worldmax
+@test length(pos) == 3
+
+#empty!
+empty!(pos)
+@test length(pos) == 0
+@test length(sequence_lookup(pos)) != 0
+empty!(pos; clear_library=true)
+@test length(sequence_lookup(pos)) == 0
+
+#append! volts and world units
+newdat = Unitful.V * [0.0:0.1:10.0...]
+append!(pos, "ramp_up", newdat)
+dat = decompress(pos, "ramp_up")
+@test dat[1] == pos.fac.worldmin
+@test dat[end] == pos.fac.worldmax
+
+newdat = Unitful.μm * [0.0:0.8:800.0...]
+replace!(pos, "ramp_up", newdat)
+dat = decompress(pos, "ramp_up")
+@test dat[1] == pos.fac.worldmin
+@test dat[end] == pos.fac.worldmax
+

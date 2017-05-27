@@ -3,7 +3,7 @@ module ImagineInterface
 using JSON, Unitful
 using MappedArrays, AxisArrays, IntervalSets
 
-import Base.show, Base.length, Base.size, Base.isempty, Base.==
+import Base.show, Base.length, Base.size, Base.isempty, Base.==, Base.append!, Base.pop!, Base.empty!
 
 include("unitfactory.jl")
 include("imaginecommand.jl")
@@ -14,16 +14,16 @@ include("write.jl")
 
 #imaginecommand.jl
 export ImagineCommand,
-        empty_command,
         name,
 	rawtype,
+        worldtype,
+        sample_rate,
 	isdigital,
+        sequences,
 	sequence_names,
 	sequence_lookup,
-#	length,
-#	size,
-#	isempty,	
-        decompress
+        decompress,
+        replace!
 
 #constants.jl
 export rigtemplate

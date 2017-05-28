@@ -58,7 +58,7 @@ function ImagineCommand(rig_name::String, chan_name::String, seqs_compressed, se
     seqlist = []
     seqnames = String[]
     for i = 1:2:length(seqs_compressed)
-        for c = 1:Int(seqs_compressed[1])
+        for c = 1:Int(seqs_compressed[i])
             push!(seqlist, seqs_lookup[seqs_compressed[i+1]])
             push!(seqnames, seqs_compressed[i+1])
         end

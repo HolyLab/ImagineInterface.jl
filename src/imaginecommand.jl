@@ -231,15 +231,18 @@ function append!(com::ImagineCommand, seqname::String)
     if !haskey(seqdict, seqname)
         error("The requested sequence name was not found.  To add a new sequence by this name, use `append!(com, seqname, sequence)`")
     else
-	push!(sequence_names(com), seqname)
-	push!(sequences(com), sequence_lookup(com)[seqname])
         #find the length of this sequence and append to cumlength vector
         seqi = findfirst(x->x==seqname, sequence_names(com))
+	push!(sequence_names(com), seqname)
+        newseq = sequence_lookup(com)[seqname]
+	push!(sequences(com), newseq)
         lseq = 0
-        if seqi == 1
-            lseq = com.cumlength[1]
+        if seqi == 0 #we didn't use this sequence yet
+            lseq = sum(newseq[1:2:end])
+        elseif seqi == 1
+            lseq = cumlength(com)[1]
         else
-            lseq = com.cumlength(seqi) - com.cumlength(seqi-1)
+            lseq = cumlength(com)[seqi] - cumlength(com)[seqi-1]
         end
         push!(com.cumlength, length(com) + lseq)
     end

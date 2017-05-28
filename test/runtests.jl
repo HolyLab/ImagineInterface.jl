@@ -6,7 +6,7 @@ using ImagineInterface
 
 #test reading
 fname = "../examples/controls_triangle.json"
-nsamps = 78750
+nsamps = 70000
 
 #analog
 d = JSON.parsefile(fname)
@@ -35,7 +35,7 @@ axs = axes(sampsa)
 @test length(axs) == 1
 axsv = axisvalues(axs[1])
 @test length(axsv) == 1
-@test axsv[1] == linspace(0.0*Unitful.s,7.8749*Unitful.s,78750)
+@test axsv[1] == linspace(0.0*Unitful.s,6.9999*Unitful.s,70000)
 
 #voltage-mapped, analog
 sampsa = decompress(pos, 1, nsamps; sampmap=:volts)

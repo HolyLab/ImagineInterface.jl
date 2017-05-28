@@ -85,8 +85,8 @@ function ImagineCommand(rig_name::String, chan_name::String, seqs, seqnames::Vec
 end
 
 function decompress(com::ImagineCommand, tstart::Unitful.Time, tstop::Unitful.Time; sampmap=:world)
-    istart = (tstart / com.fac.time_interval)+1
-    istop = (tstop / com.fac.time_interval)+1
+    istart = ceil(Int64, (tstart / com.fac.time_interval)+1)
+    istop = floor(Int64, (tstop / com.fac.time_interval)+1)
     return decompress(com, istart, istop; sampmap=sampmap)
 end
 

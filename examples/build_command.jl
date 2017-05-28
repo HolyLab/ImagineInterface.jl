@@ -27,6 +27,8 @@ pos = positioners[1]
 #Let's append sample vectors describing motion in microns
 #We will begin at 0um, sweep to the maximum, and then sweep back to 0um
 #Note that you can also append a vector of raw values or voltage values
+#If the appended vector does not lie within its corresponding interval (as queried by the `intervals` function)
+#then you will get an error
 sweep_up = [0.0:0.1:800.0...] * Unitful.μm #sweep once from the min to max
 sweep_down = [800.0:-0.1:0.0...] * Unitful.μm #sweep once from max to min
 

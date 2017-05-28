@@ -3,3 +3,4 @@ AxisArrays
 IntervalSets
 Unitful
 MappedArrays
+Compat 0.18

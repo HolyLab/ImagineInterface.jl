@@ -1,10 +1,10 @@
-#Functions called on this type return anonymous functions 
+#Functions called on this type return anonymous functions
 #converting between analog-to-digital converter bits, voltage, and world units
 type UnitFactory{Traw,TW, TT}
     rawmin::Traw
     rawmax::Traw
-    voltmin::typeof(1.0u"V")
-    voltmax::typeof(1.0u"V")
+    voltmin::typeof(1.0V)
+    voltmax::typeof(1.0V)
     worldmin::TW
     worldmax::TW
     time_interval::TT
@@ -62,21 +62,14 @@ function default_unitfactory(rig_name::String, chan_name::String; samprate = 100
     if isttl(chan_name)
         return ttl_unitfactory(; samprate = samprate)
     elseif ispos(chan_name)
-        if rig_name == "ocpi1"
-            return piezo_unitfactory(0.0*Unitful.μm, 400.0*Unitful.μm; rawtype=UInt16, samprate = samprate) 
-        elseif rig_name == "ocpi2"
-            return piezo_unitfactory(0.0*Unitful.μm, 800.0*Unitful.μm; rawtype=UInt16, samprate = samprate) 
-        else
-            error("Unrecognized rig")
-        end
+        return piezo_unitfactory(default_piezo_ranges[rig_name]...; rawtype=UInt16, samprate = samprate)
     else
         error("Unrecognized channel name")
     end
 end
 
-#Shortcut for creating a piezo controller UnitFactory, assumes that piezo operates with 0-10V input
-function piezo_unitfactory(pmin::Unitful.Length, pmax::Unitful.Length; rawtype=UInt16, samprate=10000)
-    return UnitFactory(typemin(rawtype), typemax(rawtype), 0.0*Unitful.V, 10.0*Unitful.V, pmin, pmax, 1/samprate * Unitful.s)
+function piezo_unitfactory{TL<:Unitful.Length,TV<:Voltage}(p::AbstractInterval{TL}, v::AbstractInterval{TV}; rawtype=UInt16, samprate=10000)
+    return UnitFactory(typemin(rawtype), typemax(rawtype), minimum(v), maximum(v), minimum(p), maximum(p), 1/samprate * Unitful.s)
 end
 
 #Shortcut for creating a generic digital TTL UnitFactory, assumes TTL level of 3.3V (though this doesn't matter to Imagine, only for visualizing in Julia)

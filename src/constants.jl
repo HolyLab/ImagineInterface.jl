@@ -15,6 +15,9 @@ const RIGS = ["ocpi1"; "ocpi2"]
 const TTL_PREFIXES = ["camera"; "laser"; "stimulus"]
 const POS_PREFIXES = ["positioner"]
 
+const default_piezo_ranges = Dict("ocpi1"=>(0.0μm .. 400.0μm, 0.0V .. 10.0V),
+                                  "ocpi2"=>(0.0μm .. 800.0μm, 0.0V .. 10.0V))
+
 function rigtemplate(rig::String; samprate = 10000)
     if !in(rig, RIGS)
         error("Unsupported rig")
@@ -31,7 +34,7 @@ function ocpi2template(; samprate = 10000)
     coms = ImagineCommand[]
     shared_dict = Dict()
     #positioner
-    push!(coms, ImagineCommand("positioner1", [], String[], shared_dict, Int64[], piezo_unitfactory(0.0*Unitful.μm, 800.0*Unitful.μm; rawtype = UInt16, samprate = samprate)))
+    push!(coms, ImagineCommand("positioner1", [], String[], shared_dict, Int64[], piezo_unitfactory(default_piezo_ranges["ocpi2"]...; rawtype = UInt16, samprate = samprate)))
     #cameras
     push!(coms, ImagineCommand("camera1", [], String[], shared_dict, Int64[], ttl_unitfactory(;samprate = samprate)))
     push!(coms, ImagineCommand("camera2", [], String[], shared_dict, Int64[], ttl_unitfactory(;samprate = samprate)))

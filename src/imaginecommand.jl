@@ -7,19 +7,6 @@ type ImagineCommand
     fac::UnitFactory
 end
 
-#function default_rawtype(is_digital::Bool)
-#    if !is_digital
-#        return UInt16
-#    else
-#        return Bool
-#    end
-#end
-#
-#function empty_command(is_digital::Bool; chan_name="default", time_per_sample = 1e-4*Unitful.s)
-#    rawtype = is_digital ? Bool : UInt16
-#    return ImagineCommand(chan_name, [], String[], Dict(), rawtype, Int64[], is_digital, default_unitfactory(is_digital, rawtype; time_per_sample = time_per_sample))
-#end
-
 function show(io::IO, com::ImagineCommand)
     if isdigital(com)
         print(io, "Digital ")
@@ -38,10 +25,10 @@ function show(io::IO, com::ImagineCommand)
     print(io, "      Duration(seconds): $(length(com)*com.fac.time_interval)")
 end
 
-
 Base.length(com::ImagineCommand) = isempty(com) ? 0 : com.cumlength[end]
 Base.size(C::ImagineCommand)    = length(C)
-Base.isempty(com::ImagineCommand) = isempty(com.sequences)
+Base.isempty(com::ImagineCommand) = isempty(cumlength(com))
+
 function ==(com1::ImagineCommand, com2::ImagineCommand)
     eq = true
     for nm in fieldnames(com1)
@@ -53,12 +40,14 @@ function ==(com1::ImagineCommand, com2::ImagineCommand)
     return eq
 end
 
-
 name(com::ImagineCommand) = com.chan_name
-rawtype(com::ImagineCommand) = typeof(com.fac.rawmin)
+rawtype(com::ImagineCommand) = rawtype(com.fac)
+worldtype(com::ImagineCommand) = worldtype(com.fac)
 isdigital(com::ImagineCommand) = typeof(com.fac.worldmin) == Bool
+sequences(com::ImagineCommand) = com.sequences
 sequence_names(com::ImagineCommand) = com.sequence_names
 sequence_lookup(com::ImagineCommand) = com.sequence_lookup
+cumlength(com::ImagineCommand) = com.cumlength
 #assumes rate is in samples per second
 sample_rate(com::ImagineCommand) = sample_rate(com.fac)
 set_sample_rate!(com::ImagineCommand, r::Int) = set_sample_rate!(com.fac, r)
@@ -77,16 +66,22 @@ function ImagineCommand(rig_name::String, chan_name::String, seqs_compressed, se
     return ImagineCommand(rig_name, chan_name, seqlist, seqnames, seqs_lookup, samprate)
 end
 
-function ImagineCommand(rig_name::String, chan_name::String, seqs, seqnames::Vector{String}, seqs_lookup::Dict, samprate::Int)
-    nwaves = length(seqs)
-    cumlength = zeros(Int64, nwaves)
-    if nwaves > 0
-        cumlength[1] = sum(view(seqs[1], 1:2:length(seqs[1])))
+function calc_cumlength!(output::Vector{Int64}, seqs)
+    if length(seqs) > 0
+        output[1] = sum(view(seqs[1], 1:2:length(seqs[1])))
         for s = 2:length(seqs)
-            cumlength[s] = cumlength[s-1] + sum(view(seqs[s], 1:2:length(seqs[s])))
+            output[s] = output[s-1] + sum(view(seqs[s], 1:2:length(seqs[s])))
         end
     end
-    return ImagineCommand(chan_name, seqs, seqnames, seqs_lookup, cumlength, default_unitfactory(rig_name, chan_name; samprate = samprate))
+    return output
+end
+
+recalculate_cumlength!(com) = calc_cumlength!(com.cumlength, sequences(com))
+
+function ImagineCommand(rig_name::String, chan_name::String, seqs, seqnames::Vector{String}, seqs_lookup::Dict, samprate::Int)
+    cumlen = zeros(Int64, length(seqs))
+    calc_cumlength!(cumlen, seqs)
+    return ImagineCommand(chan_name, seqs, seqnames, seqs_lookup, cumlen, default_unitfactory(rig_name, chan_name; samprate = samprate))
 end
 
 function decompress(com::ImagineCommand, tstart::Unitful.Time, tstop::Unitful.Time; sampmap=:world)
@@ -182,4 +177,121 @@ function decompress_raw(com::ImagineCommand, istart::Int, istop::Int)
     return output
 end
 
+function decompress(com::ImagineCommand, sequence_name::String; sampmap = :world)
+    #find start and stop indices of the first occurence of that sequence
+    seqi = findfirst(x->x==sequence_name, sequence_names(com))
+    if seqi == 0
+        error("Sequence name not found")
+    end
+    if seqi == 1
+        starti = 1
+    else
+        starti = cumlength(com)[seqi-1]+1
+    end
+    stopi = cumlength(com)[seqi]
+    return decompress(com, starti, stopi; sampmap=sampmap)
+end
+
+function compress!{T}(output::AbstractVector{Any}, input::AbstractVector{T})
+    if length(input) == 0
+        return output
+    end
+    count = 1
+    curval = input[1]
+    for i = 2:length(input)
+        if(curval != input[i])
+            push!(output, count)
+            push!(output, curval)
+            count = 1
+            curval = input[i]
+        else
+            count+=1
+        end
+    end
+    push!(output, count)
+    push!(output, input[end])
+    return output
+end
+
+function compress{T}(input::AbstractVector{T})
+    output = Any[]
+    if length(input) == 0
+        return output
+    end
+    return compress!(output, input)
+end
+
+compress{Traw, TW, TT}(seq::AbstractVector{Traw}, fac::UnitFactory{Traw, TW, TT}) = compress!(Any[], seq)
+#compress{Traw, TW, TT}(seq::AbstractVector{Quantity{Float64, Unitful.Unitlike, Unitful.V}}, fac::UnitFactory{Traw, TW, TT}) = compress!(Any[], mappedarray(volts2raw(fac), seq))
+compress{Traw, TW, TT}(seq::AbstractVector{typeof(0.0*Unitful.V)}, fac::UnitFactory{Traw, TW, TT}) = compress!(Any[], mappedarray(volts2raw(fac), seq))
+compress{Traw, TW, TT}(seq::AbstractVector{TW}, fac::UnitFactory{Traw, TW, TT}) = compress!(Any[], mappedarray(world2raw(fac), seq))
+
+function append!(com::ImagineCommand, seqname::String)
+    seqdict = sequence_lookup(com)
+    if !haskey(seqdict, seqname)
+        error("The requested sequence name was not found.  To add a new sequence by this name, use `append!(com, seqname, sequence)`")
+    else
+	push!(sequence_names(com), seqname)
+	push!(sequences(com), sequence_lookup(com)[seqname])
+        #find the length of this sequence and append to cumlength vector
+        seqi = findfirst(x->x==seqname, sequence_names(com))
+        lseq = 0
+        if seqi == 1
+            lseq = com.cumlength[1]
+        else
+            lseq = com.cumlength(seqi) - com.cumlength(seqi-1)
+        end
+        push!(com.cumlength, length(com) + lseq)
+    end
+    return com
+end
+
+function append!{T}(com::ImagineCommand, seqname::String, sequence::AbstractVector{T})
+    seqdict = sequence_lookup(com)
+    if haskey(seqdict, seqname)
+        error("Sequence name exists.  If you mean to add append another copy of the existing sequence, call `append!(com, seqname)` instead")
+    else
+        #compress it, add it to seqdict, append it to the sequence list, and append the name to the name list
+        cseq = compress(sequence, com.fac)
+        seqdict[seqname] = cseq
+	push!(sequences(com), cseq)
+	push!(sequence_names(com), seqname)
+        push!(cumlength(com), length(com) + length(sequence))
+    end
+    return com
+end
+
+function pop!(com::ImagineCommand)
+    pop!(cumlength(com))
+    seq = pop!(sequences(com))
+    nm = pop!(sequence_names(com))
+    return seq
+end
+
+function empty!(com::ImagineCommand; clear_library = false)
+    empty!(com.cumlength)
+    empty!(com.sequence_names)
+    empty!(com.sequences)
+    if clear_library
+        empty!(com.sequence_lookup)
+    end
+    return com
+end
+
+function replace!{T}(com::ImagineCommand, seqname::String, sequence::AbstractVector{T})
+    seqdict = sequence_lookup(com)
+    if !haskey(seqdict, seqname)
+        error("The requested sequence name was not found.  To add a new sequence by this name, use `append!(com, seqname, sequence)`")
+    else
+        cseq = compress(sequence, com.fac)
+        seqdict[seqname] = cseq
+        seqidxs = find(x->x==seqname, sequence_names(com))
+        allseqs = sequences(com)
+        for i in seqidxs
+            allseqs[i] = cseq
+        end
+        recalculate_cumlength!(com)
+    end
+    return com
+end
 

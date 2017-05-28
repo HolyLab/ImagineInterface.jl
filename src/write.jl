@@ -106,29 +106,6 @@ end
 
 compress_seqnames(c::ImagineCommand) = compress(sequence_names(c))
 
-function compress(sn::Vector{String})
-    if length(sn) == 0
-        return sn
-    end
-    output = []
-    count = 1
-    curname = sn[1]
-    for i = 2:length(sn)
-        if(curname != sn[i])
-            push!(output, count)
-            push!(output, curname)
-            count = 1
-            curname = sn[i]
-        else
-            count+=1
-        end
-    end
-    push!(output, count)
-    push!(output, sn[end])
-
-    return output
-end
-
 #TODO: disallow empty commands?
 function build_outdict(coms::Vector{ImagineCommand}, rig::String)
     seq_lookup = combine_lookups(coms)
@@ -143,10 +120,10 @@ function build_outdict(coms::Vector{ImagineCommand}, rig::String)
     for c in coms
         #if isdigital(c) && !isempty(c)
         if isdigital(c)
-            dig_dict[name(c)] = compress_seqnames(c)
+            dig_dict[name(c)] = compress(sequence_names(c))
         #elseif !isempty(c)
         else
-            ana_dict[name(c)] = compress_seqnames(c)
+            ana_dict[name(c)] = compress(sequence_names(c))
         end
     end
     return out_dict

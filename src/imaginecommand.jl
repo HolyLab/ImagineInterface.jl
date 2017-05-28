@@ -21,6 +21,7 @@ function show(io::IO, com::ImagineCommand)
     end
     print(io, "           Channel name: $(name(com))\n")
     print(io, "               Raw type: $(rawtype(com))\n")
+    print(io, "              Intervals: $(intervals(com))\n")
     print(io, "      Duration(samples): $(length(com))\n")
     print(io, "      Duration(seconds): $(length(com)*com.fac.time_interval)")
 end
@@ -47,6 +48,10 @@ isdigital(com::ImagineCommand) = typeof(com.fac.worldmin) == Bool
 sequences(com::ImagineCommand) = com.sequences
 sequence_names(com::ImagineCommand) = com.sequence_names
 sequence_lookup(com::ImagineCommand) = com.sequence_lookup
+intervals(com::ImagineCommand) = intervals(com.fac)
+interval_raw(com::ImagineCommand) = interval_raw(com.fac)
+interval_volts(com::ImagineCommand) = interval_volts(com.fac)
+interval_world(com::ImagineCommand) = interval_world(com.fac)
 cumlength(com::ImagineCommand) = com.cumlength
 #assumes rate is in samples per second
 sample_rate(com::ImagineCommand) = sample_rate(com.fac)

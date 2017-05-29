@@ -27,7 +27,7 @@ intervals(uf::UnitFactory) = (interval_raw(uf), interval_volts(uf), interval_wor
 
 #rate is samples per second
 set_sample_rate!(uf::UnitFactory, r::Int) = uf.time_interval = 1/r * Unitful.s
-sample_rate(uf::UnitFactory) = convert(Int64, 1.0*Unitful.s / uf.time_interval)
+sample_rate(uf::UnitFactory) = convert(Int, 1.0*Unitful.s / uf.time_interval)
 
 function ==(uf1::UnitFactory, uf2::UnitFactory)
     eq = true

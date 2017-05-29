@@ -28,7 +28,7 @@ type ImagineCommand
     sequences::Vector{RLEVector}
     sequence_names::Vector{String}
     sequence_lookup::Dict
-    cumlength::Array{Int64,1}
+    cumlength::Vector{Int}
     fac::UnitFactory
 end
 
@@ -103,7 +103,7 @@ end
 recalculate_cumlength!(com) = calc_cumlength!(com.cumlength, sequences(com))
 
 function ImagineCommand(rig_name::String, chan_name::String, seqs, seqnames::Vector{String}, seqs_lookup::Dict, samprate::Int)
-    cumlen = zeros(Int64, length(seqs))
+    cumlen = zeros(Int, length(seqs))
     calc_cumlength!(cumlen, seqs)
     return ImagineCommand(chan_name, seqs, seqnames, seqs_lookup, cumlen, default_unitfactory(rig_name, chan_name; samprate = samprate))
 end

@@ -3,8 +3,24 @@ immutable RepeatedValue{T}
     value::T
 end
 
+convert{T}(::Type{RepeatedValue{T}}, rv::RepeatedValue) = RepeatedValue{T}(rv.n, rv.value)
+
 "RLEVector is a run-length encoded vector"
-const RLEVector{T} = AbstractVector{RepeatedValue{T}}
+@compat const RLEVector{T} = Vector{RepeatedValue{T}}
+
+# julia-0.5 has trouble building containers of abstractly-typed
+# objects, so we use RLEVector{Any} for all objects. With higher
+# versions of Julia, we attempt to allow concretely-typed vectors.
+if VERSION < v"0.6.0-pre"
+    const RLEVec = RLEVector{Any}
+    convert(::Type{RLEVector}, v::AbstractVector) = convert(RLEVector{Any}, v)
+else
+    const RLEVec = RLEVector
+    # Use the first "real" value to infer the type. Not type-stable.
+    convert(::Type{RLEVector}, v::AbstractVector) = isempty(v) ?
+        convert(RLEVector{Any}, v) :
+        convert(RLEVector{typeof(v[2])}, v)
+end
 
 convert{T}(::Type{RLEVector{T}}, v::RLEVector{T}) = v
 convert{T,S}(::Type{RLEVector{T}}, v::RLEVector{S}) = [convert(RepeatedValue{T}, rv) for rv in v]
@@ -19,13 +35,10 @@ function convert{T,S}(::Type{RLEVector{T}}, v::AbstractVector{S})
     end
     out
 end
-# not type-stable
-convert(::Type{RLEVector}, v::AbstractVector) = isempty(v) ? convert(RLEVector{Any}, v) :
-    convert(RLEVector{typeof(v[2])}, v)
 
 type ImagineCommand
     chan_name::String
-    sequences::Vector{RLEVector}
+    sequences::Vector{RLEVec}
     sequence_names::Vector{String}
     sequence_lookup::Dict
     cumlength::Vector{Int}
@@ -78,8 +91,8 @@ sample_rate(com::ImagineCommand) = sample_rate(com.fac)
 set_sample_rate!(com::ImagineCommand, r::Int) = set_sample_rate!(com.fac, r)
 
 #In the JSON arrays, waveforms and counts-of-waves are specified in alternating order: count,wave,count,wave...
-function ImagineCommand(rig_name::String, chan_name::String, seqs_compressed::RLEVector, seqs_lookup::Dict, samprate::Int)
-    seqlist = RLEVector[]
+function ImagineCommand(rig_name::String, chan_name::String, seqs_compressed::RLEVec, seqs_lookup::Dict, samprate::Int)
+    seqlist = RLEVec[]
     seqnames = String[]
     for s in seqs_compressed
         for c = 1:s.n
@@ -90,7 +103,7 @@ function ImagineCommand(rig_name::String, chan_name::String, seqs_compressed::RL
     return ImagineCommand(rig_name, chan_name, seqlist, seqnames, seqs_lookup, samprate)
 end
 
-function calc_cumlength!{RV<:RLEVector}(output::Vector{Int}, seqs::Vector{RV})
+function calc_cumlength!{RV<:RLEVec}(output::Vector{Int}, seqs::Vector{RV})
     if !isempty(seqs)
         output[1] = sum(s.n for s in seqs[1])
         for i = 2:length(seqs)

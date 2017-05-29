@@ -54,7 +54,7 @@ function ocpi1template(; samprate = 10000)
     coms = ImagineCommand[]
     shared_dict = Dict()
     #positioner
-    push!(coms, ImagineCommand("positioner1", [], String[], shared_dict, Int64[], piezo_unitfactory(0.0*Unitful.μm, 400.0*Unitful.μm; rawtype = UInt16, samprate = samprate)))
+    push!(coms, ImagineCommand("positioner1", [], String[], shared_dict, Int64[], piezo_unitfactory(default_piezo_ranges["ocpi1"]...; rawtype = UInt16, samprate = samprate)))
     #cameras
     push!(coms, ImagineCommand("camera1", [], String[], shared_dict, Int64[], ttl_unitfactory(;samprate = samprate)))
     #laser shutter

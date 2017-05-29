@@ -21,6 +21,7 @@ function show(io::IO, com::ImagineCommand)
     end
     print(io, "           Channel name: $(name(com))\n")
     print(io, "               Raw type: $(rawtype(com))\n")
+    print(io, "              Intervals: $(intervals(com))\n")
     print(io, "      Duration(samples): $(length(com))\n")
     print(io, "      Duration(seconds): $(length(com)*com.fac.time_interval)")
 end
@@ -47,6 +48,10 @@ isdigital(com::ImagineCommand) = typeof(com.fac.worldmin) == Bool
 sequences(com::ImagineCommand) = com.sequences
 sequence_names(com::ImagineCommand) = com.sequence_names
 sequence_lookup(com::ImagineCommand) = com.sequence_lookup
+intervals(com::ImagineCommand) = intervals(com.fac)
+interval_raw(com::ImagineCommand) = interval_raw(com.fac)
+interval_volts(com::ImagineCommand) = interval_volts(com.fac)
+interval_world(com::ImagineCommand) = interval_world(com.fac)
 cumlength(com::ImagineCommand) = com.cumlength
 #assumes rate is in samples per second
 sample_rate(com::ImagineCommand) = sample_rate(com.fac)
@@ -85,8 +90,8 @@ function ImagineCommand(rig_name::String, chan_name::String, seqs, seqnames::Vec
 end
 
 function decompress(com::ImagineCommand, tstart::Unitful.Time, tstop::Unitful.Time; sampmap=:world)
-    istart = (tstart / com.fac.time_interval)+1
-    istop = (tstop / com.fac.time_interval)+1
+    istart = ceil(Int64, (tstart / com.fac.time_interval)+1)
+    istop = floor(Int64, (tstop / com.fac.time_interval)+1)
     return decompress(com, istart, istop; sampmap=sampmap)
 end
 
@@ -231,15 +236,18 @@ function append!(com::ImagineCommand, seqname::String)
     if !haskey(seqdict, seqname)
         error("The requested sequence name was not found.  To add a new sequence by this name, use `append!(com, seqname, sequence)`")
     else
-	push!(sequence_names(com), seqname)
-	push!(sequences(com), sequence_lookup(com)[seqname])
         #find the length of this sequence and append to cumlength vector
         seqi = findfirst(x->x==seqname, sequence_names(com))
+	push!(sequence_names(com), seqname)
+        newseq = sequence_lookup(com)[seqname]
+	push!(sequences(com), newseq)
         lseq = 0
-        if seqi == 1
-            lseq = com.cumlength[1]
+        if seqi == 0 #we didn't use this sequence yet
+            lseq = sum(newseq[1:2:end])
+        elseif seqi == 1
+            lseq = cumlength(com)[1]
         else
-            lseq = com.cumlength(seqi) - com.cumlength(seqi-1)
+            lseq = cumlength(com)[seqi] - cumlength(com)[seqi-1]
         end
         push!(com.cumlength, length(com) + lseq)
     end

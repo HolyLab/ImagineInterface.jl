@@ -34,17 +34,32 @@ function ocpi2template(; samprate = 10000)
     push!(coms, ImagineCommand("positioner1", [], String[], shared_dict, Int64[], piezo_unitfactory(0.0*Unitful.μm, 800.0*Unitful.μm; rawtype = UInt16, samprate = samprate)))
     #cameras
     push!(coms, ImagineCommand("camera1", [], String[], shared_dict, Int64[], ttl_unitfactory(;samprate = samprate)))
-        push!(coms, ImagineCommand("camera2", [], String[], shared_dict, Int64[], ttl_unitfactory(;samprate = samprate)))
+    push!(coms, ImagineCommand("camera2", [], String[], shared_dict, Int64[], ttl_unitfactory(;samprate = samprate)))
     #lasers
     for i = 1:5
         push!(coms, ImagineCommand("laser$i", [], String[], shared_dict, Int64[], ttl_unitfactory(;samprate = samprate)))
     end
     #stimuli
-    for i = 1:5
+    for i = 1:8
         push!(coms, ImagineCommand("stimulus$i", [], String[], shared_dict, Int64[], ttl_unitfactory(;samprate = samprate)))
     end
     return coms
 end
 
 #returns an array of empty ImagineCommands, one for each channel accessible to OCPI1 users
-#function ocpi1template
+function ocpi1template(; samprate = 10000)
+    coms = ImagineCommand[]
+    shared_dict = Dict()
+    #positioner
+    push!(coms, ImagineCommand("positioner1", [], String[], shared_dict, Int64[], piezo_unitfactory(0.0*Unitful.μm, 400.0*Unitful.μm; rawtype = UInt16, samprate = samprate)))
+    #cameras
+    push!(coms, ImagineCommand("camera1", [], String[], shared_dict, Int64[], ttl_unitfactory(;samprate = samprate)))
+    #laser shutter
+    push!(coms, ImagineCommand("laser1", [], String[], shared_dict, Int64[], ttl_unitfactory(;samprate = samprate)))
+    #stimuli
+    for i = 1:8
+        push!(coms, ImagineCommand("stimulus$i", [], String[], shared_dict, Int64[], ttl_unitfactory(;samprate = samprate)))
+    end
+    return coms
+end
+

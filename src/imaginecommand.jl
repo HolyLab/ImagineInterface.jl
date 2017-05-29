@@ -1,9 +1,47 @@
+immutable RepeatedValue{T}
+    n::Int
+    value::T
+end
+
+convert{T}(::Type{RepeatedValue{T}}, rv::RepeatedValue) = RepeatedValue{T}(rv.n, rv.value)
+
+"RLEVector is a run-length encoded vector"
+@compat const RLEVector{T} = Vector{RepeatedValue{T}}
+
+# julia-0.5 has trouble building containers of abstractly-typed
+# objects, so we use RLEVector{Any} for all objects. With higher
+# versions of Julia, we attempt to allow concretely-typed vectors.
+if VERSION < v"0.6.0-pre"
+    const RLEVec = RLEVector{Any}
+    convert(::Type{RLEVector}, v::AbstractVector) = convert(RLEVector{Any}, v)
+else
+    const RLEVec = RLEVector
+    # Use the first "real" value to infer the type. Not type-stable.
+    convert(::Type{RLEVector}, v::AbstractVector) = isempty(v) ?
+        convert(RLEVector{Any}, v) :
+        convert(RLEVector{typeof(v[2])}, v)
+end
+
+convert{T}(::Type{RLEVector{T}}, v::RLEVector{T}) = v
+convert{T,S}(::Type{RLEVector{T}}, v::RLEVector{S}) = [convert(RepeatedValue{T}, rv) for rv in v]
+convert(::Type{RLEVector}, v::RLEVector) = v
+
+function convert{T,S}(::Type{RLEVector{T}}, v::AbstractVector{S})
+    iseven(length(v)) || error("not a run-length encoded vector (length is odd)")
+    n = length(v) ÷ 2
+    out = Vector{RepeatedValue{T}}(n)
+    for i = 1:n
+        out[i] = RepeatedValue{T}(v[2i-1], v[2i])
+    end
+    out
+end
+
 type ImagineCommand
     chan_name::String
-    sequences::Array
+    sequences::Vector{RLEVec}
     sequence_names::Vector{String}
     sequence_lookup::Dict
-    cumlength::Array{Int64,1}
+    cumlength::Vector{Int}
     fac::UnitFactory
 end
 
@@ -58,24 +96,23 @@ sample_rate(com::ImagineCommand) = sample_rate(com.fac)
 set_sample_rate!(com::ImagineCommand, r::Int) = set_sample_rate!(com.fac, r)
 
 #In the JSON arrays, waveforms and counts-of-waves are specified in alternating order: count,wave,count,wave...
-function ImagineCommand(rig_name::String, chan_name::String, seqs_compressed, seqs_lookup::Dict, samprate::Int)
-    @assert iseven(length(seqs_compressed))
-    seqlist = []
+function ImagineCommand(rig_name::String, chan_name::String, seqs_compressed::RLEVec, seqs_lookup::Dict, samprate::Int)
+    seqlist = RLEVec[]
     seqnames = String[]
-    for i = 1:2:length(seqs_compressed)
-        for c = 1:Int(seqs_compressed[i])
-            push!(seqlist, seqs_lookup[seqs_compressed[i+1]])
-            push!(seqnames, seqs_compressed[i+1])
+    for s in seqs_compressed
+        for c = 1:s.n
+            push!(seqlist, seqs_lookup[s.value])
+            push!(seqnames, s.value)
         end
     end
     return ImagineCommand(rig_name, chan_name, seqlist, seqnames, seqs_lookup, samprate)
 end
 
-function calc_cumlength!(output::Vector{Int64}, seqs)
-    if length(seqs) > 0
-        output[1] = sum(view(seqs[1], 1:2:length(seqs[1])))
-        for s = 2:length(seqs)
-            output[s] = output[s-1] + sum(view(seqs[s], 1:2:length(seqs[s])))
+function calc_cumlength!{RV<:RLEVec}(output::Vector{Int}, seqs::Vector{RV})
+    if !isempty(seqs)
+        output[1] = sum(s.n for s in seqs[1])
+        for i = 2:length(seqs)
+            output[i] = output[i-1] + sum(s.n for s in seqs[i])
         end
     end
     return output
@@ -84,7 +121,7 @@ end
 recalculate_cumlength!(com) = calc_cumlength!(com.cumlength, sequences(com))
 
 function ImagineCommand(rig_name::String, chan_name::String, seqs, seqnames::Vector{String}, seqs_lookup::Dict, samprate::Int)
-    cumlen = zeros(Int64, length(seqs))
+    cumlen = zeros(Int, length(seqs))
     calc_cumlength!(cumlen, seqs)
     return ImagineCommand(chan_name, seqs, seqnames, seqs_lookup, cumlen, default_unitfactory(rig_name, chan_name; samprate = samprate))
 end
@@ -139,9 +176,8 @@ function decompress_raw(com::ImagineCommand, istart::Int, istop::Int)
     else
         offset0 = istart
     end
-    
-    curvals = view(com.sequences[iseq], 2:2:length(com.sequences[iseq]))
-    curcounts = view(com.sequences[iseq], 1:2:length(com.sequences[iseq]))
+
+    seq = com.sequences[iseq]
     ival = 1
     curcount = 1
     icount = 0
@@ -149,7 +185,7 @@ function decompress_raw(com::ImagineCommand, istart::Int, istop::Int)
     while offset0 > 1
         icount+=1
         offset0-=1
-        if icount > curcounts[curcount]
+        if icount > seq[curcount].n
             curcount+=1
             ival+=1
             icount = 0
@@ -160,14 +196,13 @@ function decompress_raw(com::ImagineCommand, istart::Int, istop::Int)
     output = zeros(rawtype(com), num_samps)
     #decompress num_samps samples beginning at istart
     so_far = 1
-    output[so_far] = curvals[ival] #write first sample
+    output[so_far] = seq[ival].value #write first sample
     while so_far < num_samps
         icount+=1
-        if icount == curcounts[curcount] #if we should increment curcount, ival and reset icount
-            if curcount+1 > length(curcounts) #if we should increment iseq and reset curcount,icount,ival
+        if icount == seq[curcount].n #if we should increment curcount, ival and reset icount
+            if curcount+1 > length(seq) #if we should increment iseq and reset curcount,icount,ival
                 iseq+=1
-                curvals = view(com.sequences[iseq], 2:2:length(com.sequences[iseq]))
-                curcounts = view(com.sequences[iseq], 1:2:length(com.sequences[iseq]))
+                seq = com.sequences[iseq]
                 curcount = ival = 1
                 icount = 0
             else
@@ -177,7 +212,7 @@ function decompress_raw(com::ImagineCommand, istart::Int, istop::Int)
             end
         end
         so_far+=1
-        output[so_far] = curvals[ival]
+        output[so_far] = seq[ival].value
     end
     return output
 end
@@ -197,39 +232,34 @@ function decompress(com::ImagineCommand, sequence_name::String; sampmap = :world
     return decompress(com, starti, stopi; sampmap=sampmap)
 end
 
-function compress!{T}(output::AbstractVector{Any}, input::AbstractVector{T})
-    if length(input) == 0
+function compress!{T}(output::RLEVector{T}, input::AbstractVector{T})
+    if isempty(input)
         return output
     end
     count = 1
     curval = input[1]
     for i = 2:length(input)
         if(curval != input[i])
-            push!(output, count)
-            push!(output, curval)
+            push!(output, RepeatedValue(count, curval))
             count = 1
             curval = input[i]
         else
             count+=1
         end
     end
-    push!(output, count)
-    push!(output, input[end])
+    push!(output, RepeatedValue(count, input[end]))
     return output
 end
 
 function compress{T}(input::AbstractVector{T})
-    output = Any[]
-    if length(input) == 0
-        return output
-    end
+    output = Vector{RepeatedValue{T}}(0)
     return compress!(output, input)
 end
+compress(input::RLEVector) = input
 
-compress{Traw, TW, TT}(seq::AbstractVector{Traw}, fac::UnitFactory{Traw, TW, TT}) = compress!(Any[], seq)
-#compress{Traw, TW, TT}(seq::AbstractVector{Quantity{Float64, Unitful.Unitlike, Unitful.V}}, fac::UnitFactory{Traw, TW, TT}) = compress!(Any[], mappedarray(volts2raw(fac), seq))
-compress{Traw, TW, TT}(seq::AbstractVector{typeof(0.0*Unitful.V)}, fac::UnitFactory{Traw, TW, TT}) = compress!(Any[], mappedarray(volts2raw(fac), seq))
-compress{Traw, TW, TT}(seq::AbstractVector{TW}, fac::UnitFactory{Traw, TW, TT}) = compress!(Any[], mappedarray(world2raw(fac), seq))
+compress{Traw, TW, TT}(seq::AbstractVector{Traw}, fac::UnitFactory{Traw, TW, TT}) = compress!(RepeatedValue{Traw}[], seq)
+compress{Traw, TW, TT}(seq::AbstractVector{typeof(0.0*Unitful.V)}, fac::UnitFactory{Traw, TW, TT}) = compress!(RepeatedValue{Traw}[], mappedarray(volts2raw(fac), seq))
+compress{Traw, TW, TT}(seq::AbstractVector{TW}, fac::UnitFactory{Traw, TW, TT}) = compress!(RepeatedValue{Traw}[], mappedarray(world2raw(fac), seq))
 
 function append!(com::ImagineCommand, seqname::String)
     seqdict = sequence_lookup(com)
@@ -302,4 +332,3 @@ function replace!{T}(com::ImagineCommand, seqname::String, sequence::AbstractVec
     end
     return com
 end
-

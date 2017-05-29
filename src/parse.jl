@@ -14,7 +14,8 @@ function parse_commands(d::Dict)
     end
     for typ_key in (ANALOG_KEY, DIGITAL_KEY)
         for k in keys(d[typ_key])
-            push!(output, ImagineCommand(rig, k, d[typ_key][k], d[COMPONENT_KEY], Int64(d[METADATA_KEY]["sample rate"])))
+            v = d[typ_key][k]
+            push!(output, ImagineCommand(rig, k, convert(RLEVector, v), d[COMPONENT_KEY], Int64(d[METADATA_KEY]["sample rate"])))
         end
     end
     return output
@@ -37,10 +38,8 @@ function parse_command(d::Dict, comname::String)
     for typ_key in (ANALOG_KEY, DIGITAL_KEY)
         ad = d[typ_key]
         if haskey(ad, comname)
-            return ImagineCommand(rig, comname, ad[comname], d[COMPONENT_KEY], Int64(d[METADATA_KEY]["sample rate"]))
+            return ImagineCommand(rig, comname, convert(RLEVector, ad[comname]), d[COMPONENT_KEY], Int64(d[METADATA_KEY]["sample rate"]))
         end
     end
     error("Command signal name not found")
 end
-
-

@@ -13,7 +13,7 @@
 #		laser1 -> laser5 (OCPI2 only, at least for entries 2-5)
 #		camera1
 #		camera2 (OCPI2 only)
-#		stimulus1 -> stimulus8	
+#		stimulus1 -> stimulus8
 #  "metadata"        => Dict{String,Any}(Pair{String,Any}("frames",20),Pair{String,Any}("sample rate",10000),Pair{String,Any}("bi-direction",false),Pair{String,Any}("expo…
 #	(another dict with this  metadata:
 	#  "frames"       (integer)
@@ -138,5 +138,7 @@ function write_commands(fname::String, rig::String, coms::Vector{ImagineCommand}
     close(f)
 end
 
-
-
+function JSON.Writer.show_element(io::JSON.Writer.JSONContext, s, x::RepeatedValue)
+    JSON.show_element(io, s, x.n)
+    JSON.show_element(io, s, x.value)
+end

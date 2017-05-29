@@ -4,7 +4,7 @@ using JSON, Unitful
 using MappedArrays, AxisArrays, IntervalSets
 using Compat
 
-import Base.show, Base.length, Base.size, Base.isempty, Base.==, Base.append!, Base.pop!, Base.empty!
+import Base: convert, show, length, size, isempty, ==, append!, pop!, empty!
 
 using Unitful: μm, V
 @compat const Voltage{T,U} = Quantity{T, typeof(0.0V).parameters[2], U}

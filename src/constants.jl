@@ -34,17 +34,17 @@ function ocpi2template(; samprate = 10000)
     coms = ImagineCommand[]
     shared_dict = Dict()
     #positioner
-    push!(coms, ImagineCommand("positioner1", [], String[], shared_dict, Int64[], piezo_unitfactory(default_piezo_ranges["ocpi2"]...; rawtype = UInt16, samprate = samprate)))
+    push!(coms, ImagineCommand("positioner1", [], String[], shared_dict, Int[], piezo_unitfactory(default_piezo_ranges["ocpi2"]...; rawtype = UInt16, samprate = samprate)))
     #cameras
-    push!(coms, ImagineCommand("camera1", [], String[], shared_dict, Int64[], ttl_unitfactory(;samprate = samprate)))
-    push!(coms, ImagineCommand("camera2", [], String[], shared_dict, Int64[], ttl_unitfactory(;samprate = samprate)))
+    push!(coms, ImagineCommand("camera1", [], String[], shared_dict, Int[], ttl_unitfactory(;samprate = samprate)))
+    push!(coms, ImagineCommand("camera2", [], String[], shared_dict, Int[], ttl_unitfactory(;samprate = samprate)))
     #lasers
     for i = 1:5
-        push!(coms, ImagineCommand("laser$i", [], String[], shared_dict, Int64[], ttl_unitfactory(;samprate = samprate)))
+        push!(coms, ImagineCommand("laser$i", [], String[], shared_dict, Int[], ttl_unitfactory(;samprate = samprate)))
     end
     #stimuli
     for i = 1:8
-        push!(coms, ImagineCommand("stimulus$i", [], String[], shared_dict, Int64[], ttl_unitfactory(;samprate = samprate)))
+        push!(coms, ImagineCommand("stimulus$i", [], String[], shared_dict, Int[], ttl_unitfactory(;samprate = samprate)))
     end
     return coms
 end

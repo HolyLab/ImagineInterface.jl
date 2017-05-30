@@ -61,7 +61,7 @@ function spaced_intervals{TS, TT}(samples_space::Ranges.LinSpace{TS}, spacing::T
     if nintervals == 0
         error("The requested duration is longer than the sampled region.")
     end
-    output = Array(ClosedInterval{Int}, nintervals)
+    output = Array{ClosedInterval{Int}}(nintervals)
     if alignment == :stop
         offset+=extra
     end

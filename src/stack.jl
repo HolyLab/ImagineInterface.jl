@@ -15,21 +15,20 @@ end
 function gen_sawtooth(pmin::Unitful.Length, pmax::Unitful.Length, tfwd::Unitful.Time, treset::Unitful.Time, samprate::Int)
     fwd_linspace = gen_sweep(pmin, pmax, tfwd, samprate)
     reset_linspace = gen_sweep(pmax, pmin, treset, samprate)
-#    samp_vec = vcat(fwd_samps, reset_samps)
-#    ax = Axis{:time}(linspace(0.0*Unitful.s, (length(samp_vec)-1)*dt, length(samp_vec)))
-#    return AxisArray(samp_vec, ax)
     return fwd_linspace, reset_linspace
 end
 gen_bidi_pos(pmin::Unitful.Length, pmax::Unitful.Length, tsweep::Unitful.Time, samprate::Int) = gen_sawtooth(pmin, pmax, tsweep, tsweep, samprate)
 
-#returns a vector of sample-index intervals separated by `spacing`.  The first interval is offset from the first sample of the sampled region by the `offset` keyword arg
-#function spaced_intervals{T}(sampled_region::LinSpace{T}, wdth::T, spacing::T; offset=0::Int)
+#returns a vector of sample-index intervals separated by `spacing`.
+#The first interval is offset from the first sample of the sampled region by the `offset` keyword arg
+#The `z_pad` kwarg, specified in non-temporal units, will prevent placement of intervals at the extremes of the smaple space
+#The `alignment` kwarg determines whether the first interval begins at the first valid sample (:start) or the last interval ends at the last valid sample (:stop)
+#Thus :start and :stop will produce equal results for certain well-dividing sample counts, but most of the time they are different
 function spaced_intervals{TS, TT}(samples_space::Ranges.LinSpace{TS}, spacing::TS, duration::TT, samprate::Int;
                                 delay=uconvert(unit(TT), 0.0*Unitful.s), z_pad = uconvert(unit(TS), 1.0*Unitful.μm), alignment=:start)
     if !in(alignment, (:start, :stop))
         error("Only :start and :stop alignment is supported")
     end
-#    times = axisvalues(axes(sampled_region, Axis{:time}))[1]
     sampdur = uconvert(unit(TT), (1/samprate)*Unitful.s)
     sampsize = abs(step(samples_space))
     pad_samps = round(Int, z_pad/sampsize)

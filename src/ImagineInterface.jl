@@ -12,6 +12,7 @@ using Unitful: μm, V
 include("unitfactory.jl")
 include("imaginecommand.jl")
 include("constants.jl")
+include("hardware.jl")
 include("convenience.jl")
 include("parse.jl")
 include("write.jl")

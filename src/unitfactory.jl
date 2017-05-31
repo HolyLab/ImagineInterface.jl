@@ -56,21 +56,3 @@ end
 #end
 
 
-function default_unitfactory(rig_name::String, chan_name::String; samprate = 10000)
-    if isttl(chan_name)
-        return ttl_unitfactory(; samprate = samprate)
-    elseif ispos(chan_name)
-        return piezo_unitfactory(default_piezo_ranges[rig_name]...; rawtype=UInt16, samprate = samprate)
-    else
-        error("Unrecognized channel name")
-    end
-end
-
-function piezo_unitfactory{TL<:Unitful.Length,TV<:Voltage}(p::AbstractInterval{TL}, v::AbstractInterval{TV}; rawtype=UInt16, samprate=10000)
-    return UnitFactory(typemin(rawtype), typemax(rawtype), minimum(v), maximum(v), minimum(p), maximum(p), 1/samprate * Unitful.s)
-end
-
-#Shortcut for creating a generic digital TTL UnitFactory, assumes TTL level of 3.3V (though this doesn't matter to Imagine, only for visualizing in Julia)
-function ttl_unitfactory(; samprate=10000)
-    return UnitFactory(UInt8(false), UInt8(true), 0.0*Unitful.V, 3.3*Unitful.V, false, true, 1/samprate * Unitful.s)
-end

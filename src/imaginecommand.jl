@@ -83,6 +83,7 @@ name(com::ImagineCommand) = com.chan_name
 rawtype(com::ImagineCommand) = rawtype(com.fac)
 worldtype(com::ImagineCommand) = worldtype(com.fac)
 isdigital(com::ImagineCommand) = typeof(com.fac.worldmin) == Bool
+isanalog(com::ImagineCommand) = !isdigital(com)
 sequences(com::ImagineCommand) = com.sequences
 sequence_names(com::ImagineCommand) = com.sequence_names
 sequence_lookup(com::ImagineCommand) = com.sequence_lookup

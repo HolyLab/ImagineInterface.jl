@@ -6,8 +6,11 @@ using Compat
 
 import Base: convert, show, length, size, isempty, ==, append!, pop!, empty! #, scale
 
-using Unitful: μm, V
-@compat const Voltage{T,U} = Quantity{T, typeof(0.0V).parameters[2], U}
+using Unitful: μm, s, V
+@compat const HasVoltageUnits{T,U} = Quantity{T, typeof(0.0V).parameters[2], U}
+@compat const HasTimeUnits{T,U} = Quantity{T, typeof(0.0s).parameters[2], U}
+@compat const HasInverseTimeUnits{T,U} = Quantity{T, typeof(inv(0.0s)).parameters[2], U}
+@compat const HasLengthUnits{T,U} = Quantity{T, typeof(0.0μm).parameters[2], U}
 
 include("samplemapper.jl")
 include("imaginecommand.jl")
@@ -23,7 +26,7 @@ export ImagineCommand,
         name,
 	rawtype,
         worldtype,
-        sample_rate,
+        samprate,
         intervals,
         interval_raw,
         interval_volts,

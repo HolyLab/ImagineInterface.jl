@@ -40,23 +40,21 @@ function ==(uf1::UnitFactory, uf2::UnitFactory)
     return eq
 end
 
-function get_prefix(chan_name::String)
-    istop = 0
-    for cur = 1:length(chan_name)
-        if !isnumber(chan_name[cur])
-            istop+=1
-        else
-            break
-        end
-    end
-    if istop == 0
-        error("No non-numeric prefix exists")
-    end
-    return chan_name[1:istop]
-end
+#function get_prefix(chan_name::String)
+#    istop = 0
+#    for cur = 1:length(chan_name)
+#        if !isnumber(chan_name[cur])
+#            istop+=1
+#        else
+#            break
+#        end
+#    end
+#    if istop == 0
+#        error("No non-numeric prefix exists")
+#    end
+#    return chan_name[1:istop]
+#end
 
-isttl(chan_name::String) = in(get_prefix(chan_name), TTL_PREFIXES)
-ispos(chan_name::String) = in(get_prefix(chan_name), POS_PREFIXES)
 
 function default_unitfactory(rig_name::String, chan_name::String; samprate = 10000)
     if isttl(chan_name)

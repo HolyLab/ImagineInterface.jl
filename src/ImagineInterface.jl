@@ -9,7 +9,7 @@ import Base: convert, show, length, size, isempty, ==, append!, pop!, empty! #, 
 using Unitful: μm, V
 @compat const Voltage{T,U} = Quantity{T, typeof(0.0V).parameters[2], U}
 
-include("unitfactory.jl")
+include("samplemapper.jl")
 include("imaginecommand.jl")
 include("constants.jl")
 include("hardware.jl")
@@ -32,6 +32,7 @@ export ImagineCommand,
         sequences,
 	sequence_names,
 	sequence_lookup,
+        mapper,
         decompress,
         replace!
 

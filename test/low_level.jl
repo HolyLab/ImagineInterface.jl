@@ -95,8 +95,8 @@ pos = getpositioners(ocpi2)[1]
 rawdat = UInt16[0:typemax(UInt16)...]
 append!(pos, "ramp_up", rawdat)
 dat = decompress(pos, "ramp_up")
-@test dat[1] == pos.fac.worldmin
-@test dat[end] == pos.fac.worldmax
+@test dat[1] == mapper(pos).worldmin
+@test dat[end] == mapper(pos).worldmax
 append!(pos, "ramp_up") #append existing
 @test length(pos) == 2*typemax(UInt16)+2
 
@@ -104,20 +104,20 @@ append!(pos, "ramp_up") #append existing
 rawdat2 = UInt16[typemax(UInt16):-1:0...]
 replace!(pos, "ramp_up", rawdat2)
 dat = decompress(pos, "ramp_up")
-@test dat[end] == pos.fac.worldmin
-@test dat[1] == pos.fac.worldmax
+@test dat[end] == mapper(pos).worldmin
+@test dat[1] == mapper(pos).worldmax
 rawdat3 = UInt16[0;0;typemax(UInt16)] #change length
 replace!(pos, "ramp_up", rawdat3)
 dat = decompress(pos, "ramp_up")
-@test dat[1] == pos.fac.worldmin
-@test dat[3] == pos.fac.worldmax
+@test dat[1] == mapper(pos).worldmin
+@test dat[3] == mapper(pos).worldmax
 @test length(pos) == 6
 
 #pop!
 pop!(pos)
 dat = decompress(pos, "ramp_up")
-@test dat[1] == pos.fac.worldmin
-@test dat[3] == pos.fac.worldmax
+@test dat[1] == mapper(pos).worldmin
+@test dat[3] == mapper(pos).worldmax
 @test length(pos) == 3
 
 #empty!
@@ -131,12 +131,12 @@ empty!(pos; clear_library=true)
 newdat = Unitful.V * [0.0:0.1:10.0...]
 append!(pos, "ramp_up", newdat)
 dat = decompress(pos, "ramp_up")
-@test dat[1] == pos.fac.worldmin
-@test dat[end] == pos.fac.worldmax
+@test dat[1] == mapper(pos).worldmin
+@test dat[end] == mapper(pos).worldmax
 
 newdat = Unitful.μm * [0.0:0.8:800.0...]
 replace!(pos, "ramp_up", newdat)
 dat = decompress(pos, "ramp_up")
-@test dat[1] == pos.fac.worldmin
-@test dat[end] == pos.fac.worldmax
+@test dat[1] == mapper(pos).worldmin
+@test dat[end] == mapper(pos).worldmax
 

@@ -41,7 +41,7 @@ function issimilar(com1::ImagineCommand, com2::ImagineCommand; ignore_time=false
     if rawtype(com1) != rawtype(com2) || name(com1) != name(com2) || isdigital(com1) != isdigital(com2)
         issim = false
     end
-    if intervals(com1.fac) != intervals(com2.fac)
+    if intervals(com1) != intervals(com2)
         issim = false
     end
     if !ignore_time

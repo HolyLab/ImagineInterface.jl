@@ -42,7 +42,7 @@ type ImagineCommand
     sequence_names::Vector{String}
     sequence_lookup::Dict
     cumlength::Vector{Int}
-    fac::UnitFactory
+    mapper::SampleMapper
 end
 
 function show(io::IO, com::ImagineCommand)
@@ -55,13 +55,13 @@ function show(io::IO, com::ImagineCommand)
     if isdigital(com)
         print(io, "\n")
     else
-        print(io, " encoding values from $(com.fac.worldmin) to $(com.fac.worldmax)\n")
+        print(io, " encoding values from $(mapper(com).worldmin) to $(mapper(com).worldmax)\n")
     end
     print(io, "           Channel name: $(name(com))\n")
     print(io, "               Raw type: $(rawtype(com))\n")
     print(io, "              Intervals: $(intervals(com))\n")
     print(io, "      Duration(samples): $(length(com))\n")
-    print(io, "      Duration(seconds): $(length(com)*com.fac.time_interval)")
+    print(io, "      Duration(seconds): $(length(com)*mapper(com).time_interval)")
 end
 
 Base.length(com::ImagineCommand) = isempty(com) ? 0 : com.cumlength[end]
@@ -80,20 +80,22 @@ function ==(com1::ImagineCommand, com2::ImagineCommand)
 end
 
 name(com::ImagineCommand) = com.chan_name
-rawtype(com::ImagineCommand) = rawtype(com.fac)
-worldtype(com::ImagineCommand) = worldtype(com.fac)
-isdigital(com::ImagineCommand) = typeof(com.fac.worldmin) == Bool
+rawtype(com::ImagineCommand) = rawtype(mapper(com))
+worldtype(com::ImagineCommand) = worldtype(mapper(com))
+isdigital(com::ImagineCommand) = typeof(mapper(com).worldmin) == Bool
+isanalog(com::ImagineCommand) = !isdigital(com)
 sequences(com::ImagineCommand) = com.sequences
 sequence_names(com::ImagineCommand) = com.sequence_names
 sequence_lookup(com::ImagineCommand) = com.sequence_lookup
-intervals(com::ImagineCommand) = intervals(com.fac)
-interval_raw(com::ImagineCommand) = interval_raw(com.fac)
-interval_volts(com::ImagineCommand) = interval_volts(com.fac)
-interval_world(com::ImagineCommand) = interval_world(com.fac)
+mapper(com::ImagineCommand) = com.mapper
+intervals(com::ImagineCommand) = intervals(mapper(com))
+interval_raw(com::ImagineCommand) = interval_raw(mapper(com))
+interval_volts(com::ImagineCommand) = interval_volts(mapper(com))
+interval_world(com::ImagineCommand) = interval_world(mapper(com))
 cumlength(com::ImagineCommand) = com.cumlength
 #assumes rate is in samples per second
-sample_rate(com::ImagineCommand) = sample_rate(com.fac)
-set_sample_rate!(com::ImagineCommand, r::Int) = set_sample_rate!(com.fac, r)
+sample_rate(com::ImagineCommand) = sample_rate(mapper(com))
+set_sample_rate!(com::ImagineCommand, r::Int) = set_sample_rate!(mapper(com), r)
 
 #In the JSON arrays, waveforms and counts-of-waves are specified in alternating order: count,wave,count,wave...
 function ImagineCommand(rig_name::String, chan_name::String, seqs_compressed::RLEVec, seqs_lookup::Dict, samprate::Int)
@@ -123,12 +125,12 @@ recalculate_cumlength!(com) = calc_cumlength!(com.cumlength, sequences(com))
 function ImagineCommand(rig_name::String, chan_name::String, seqs, seqnames::Vector{String}, seqs_lookup::Dict, samprate::Int)
     cumlen = zeros(Int, length(seqs))
     calc_cumlength!(cumlen, seqs)
-    return ImagineCommand(chan_name, seqs, seqnames, seqs_lookup, cumlen, default_unitfactory(rig_name, chan_name; samprate = samprate))
+    return ImagineCommand(chan_name, seqs, seqnames, seqs_lookup, cumlen, default_samplemapper(rig_name, chan_name; samprate = samprate))
 end
 
 function decompress(com::ImagineCommand, tstart::Unitful.Time, tstop::Unitful.Time; sampmap=:world)
-    istart = ceil(Int64, (tstart / com.fac.time_interval)+1)
-    istop = floor(Int64, (tstop / com.fac.time_interval)+1)
+    istart = ceil(Int64, (tstart / mapper(com).time_interval)+1)
+    istop = floor(Int64, (tstop / mapper(com).time_interval)+1)
     return decompress(com, istart, istop; sampmap=sampmap)
 end
 
@@ -140,18 +142,18 @@ function decompress(com::ImagineCommand, istart::Int, istop::Int; sampmap=:world
     datm = decompress_raw(com, istart, istop)
 
     if sampmap == :world || sampmap == :volts
-        f0 = raw2volts(com.fac)
-        f0inv = volts2raw(com.fac)
+        f0 = raw2volts(mapper(com))
+        f0inv = volts2raw(mapper(com))
         datm = mappedarray((f0,f0inv), datm)
     end
     if sampmap == :world
-        f1 = volts2world(com.fac)
-        f1inv = world2volts(com.fac)
+        f1 = volts2world(mapper(com))
+        f1inv = world2volts(mapper(com))
         datm = mappedarray((f1, f1inv), datm)
     end
-    tstart = (istart-1) * com.fac.time_interval
-    tstop = (istop-1) * com.fac.time_interval
-    ax = Axis{:time}(tstart:com.fac.time_interval:tstop)
+    tstart = (istart-1) * mapper(com).time_interval
+    tstop = (istop-1) * mapper(com).time_interval
+    ax = Axis{:time}(tstart:mapper(com).time_interval:tstop)
     return AxisArray(datm, ax)
 end
 
@@ -257,9 +259,9 @@ function compress{T}(input::AbstractVector{T})
 end
 compress(input::RLEVector) = input
 
-compress{Traw, TW, TT}(seq::AbstractVector{Traw}, fac::UnitFactory{Traw, TW, TT}) = compress!(RepeatedValue{Traw}[], seq)
-compress{Traw, TW, TT}(seq::AbstractVector{typeof(0.0*Unitful.V)}, fac::UnitFactory{Traw, TW, TT}) = compress!(RepeatedValue{Traw}[], mappedarray(volts2raw(fac), seq))
-compress{Traw, TW, TT}(seq::AbstractVector{TW}, fac::UnitFactory{Traw, TW, TT}) = compress!(RepeatedValue{Traw}[], mappedarray(world2raw(fac), seq))
+compress{Traw, TW, TT}(seq::AbstractVector{Traw}, mapper::SampleMapper{Traw, TW, TT}) = compress!(RepeatedValue{Traw}[], seq)
+compress{Traw, TW, TT}(seq::AbstractVector{typeof(0.0*Unitful.V)}, mapper::SampleMapper{Traw, TW, TT}) = compress!(RepeatedValue{Traw}[], mappedarray(volts2raw(mapper), seq))
+compress{Traw, TW, TT}(seq::AbstractVector{TW}, mapper::SampleMapper{Traw, TW, TT}) = compress!(RepeatedValue{Traw}[], mappedarray(world2raw(mapper), seq))
 
 function append!(com::ImagineCommand, seqname::String)
     seqdict = sequence_lookup(com)
@@ -290,7 +292,7 @@ function append!{T}(com::ImagineCommand, seqname::String, sequence::AbstractVect
         error("Sequence name exists.  If you mean to add append another copy of the existing sequence, call `append!(com, seqname)` instead")
     else
         #compress it, add it to seqdict, append it to the sequence list, and append the name to the name list
-        cseq = compress(sequence, com.fac)
+        cseq = compress(sequence, mapper(com))
         seqdict[seqname] = cseq
 	push!(sequences(com), cseq)
 	push!(sequence_names(com), seqname)
@@ -321,7 +323,7 @@ function replace!{T}(com::ImagineCommand, seqname::String, sequence::AbstractVec
     if !haskey(seqdict, seqname)
         error("The requested sequence name was not found.  To add a new sequence by this name, use `append!(com, seqname, sequence)`")
     else
-        cseq = compress(sequence, com.fac)
+        cseq = compress(sequence, mapper(com))
         seqdict[seqname] = cseq
         seqidxs = find(x->x==seqname, sequence_names(com))
         allseqs = sequences(com)

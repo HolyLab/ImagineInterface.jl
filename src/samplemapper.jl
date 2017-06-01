@@ -1,33 +1,32 @@
 #Functions called on this type return anonymous functions
 #converting between analog-to-digital converter bits, voltage, and world units
-type SampleMapper{Traw,TW, TT}
+type SampleMapper{Traw,TW}
     rawmin::Traw
     rawmax::Traw
-    voltmin::typeof(1.0V)
-    voltmax::typeof(1.0V)
+    voltmin::HasVoltageUnits
+    voltmax::HasVoltageUnits
     worldmin::TW
     worldmax::TW
-    time_interval::TT
+    samprate::HasInverseTimeUnits
 end
 
-raw2volts{Traw,TW,TT}(mapper::SampleMapper{Traw,TW,TT}) = x -> mapper.voltmin + ((x-mapper.rawmin)/(mapper.rawmax-mapper.rawmin))*(mapper.voltmax-mapper.voltmin)
-volts2world{Traw,TW,TT}(mapper::SampleMapper{Traw,TW,TT}) = x -> mapper.worldmin + ((x-mapper.voltmin)/(mapper.voltmax-mapper.voltmin))*(mapper.worldmax-mapper.worldmin)
-world2volts{Traw,TW,TT}(mapper::SampleMapper{Traw,TW,TT}) = x -> mapper.voltmin + ((x-mapper.worldmin)/(mapper.worldmax-mapper.worldmin))*(mapper.voltmax-mapper.voltmin)
-volts2raw{Traw,TW,TT}(mapper::SampleMapper{Traw,TW,TT}) = x -> round(rawtype(mapper), mapper.rawmin + ((x-mapper.voltmin)/(mapper.voltmax-mapper.voltmin))*(mapper.rawmax-mapper.rawmin))
-world2raw{Traw,TW,TT}(mapper::SampleMapper{Traw,TW,TT}) = x -> volts2raw(mapper)(world2volts(mapper)(x))
-raw2world{Traw,TW,TT}(mapper::SampleMapper{Traw,TW,TT}) = x -> volts2world(mapper)(raw2volts(mapper)(x))
+raw2volts{Traw,TW}(mapper::SampleMapper{Traw,TW}) = x -> mapper.voltmin + ((x-mapper.rawmin)/(mapper.rawmax-mapper.rawmin))*(mapper.voltmax-mapper.voltmin)
+volts2world{Traw,TW}(mapper::SampleMapper{Traw,TW}) = x -> mapper.worldmin + ((x-mapper.voltmin)/(mapper.voltmax-mapper.voltmin))*(mapper.worldmax-mapper.worldmin)
+world2volts{Traw,TW}(mapper::SampleMapper{Traw,TW}) = x -> mapper.voltmin + ((x-mapper.worldmin)/(mapper.worldmax-mapper.worldmin))*(mapper.voltmax-mapper.voltmin)
+volts2raw{Traw,TW}(mapper::SampleMapper{Traw,TW}) = x -> round(rawtype(mapper), mapper.rawmin + ((x-mapper.voltmin)/(mapper.voltmax-mapper.voltmin))*(mapper.rawmax-mapper.rawmin))
+world2raw{Traw,TW}(mapper::SampleMapper{Traw,TW}) = x -> volts2raw(mapper)(world2volts(mapper)(x))
+raw2world{Traw,TW}(mapper::SampleMapper{Traw,TW}) = x -> volts2world(mapper)(raw2volts(mapper)(x))
 
-rawtype(sm::SampleMapper) = typeof(sm.rawmin)
-worldtype(sm::SampleMapper) = typeof(sm.worldmin)
+rawtype{Traw,TW}(sm::SampleMapper{Traw, TW}) = Traw
+worldtype{Traw,TW}(sm::SampleMapper{Traw, TW}) = TW
 
 interval_raw(sm::SampleMapper) = ClosedInterval(sm.rawmin, sm.rawmax)
 interval_volts(sm::SampleMapper) = ClosedInterval(sm.voltmin, sm.voltmax)
 interval_world(sm::SampleMapper) = ClosedInterval(sm.worldmin, sm.worldmax)
 intervals(sm::SampleMapper) = (interval_raw(sm), interval_volts(sm), interval_world(sm))
 
-#rate is samples per second
-set_sample_rate!(sm::SampleMapper, r::Int) = sm.time_interval = 1/r * Unitful.s
-sample_rate(sm::SampleMapper) = convert(Int, 1.0*Unitful.s / sm.time_interval)
+set_samprate!(sm::SampleMapper, r::HasInverseTimeUnits) = sm.samprate = r #round(Int, ustrip(1/r)) * unit(1/r)
+samprate(sm::SampleMapper) = sm.samprate
 
 function ==(sm1::SampleMapper, sm2::SampleMapper)
     eq = true

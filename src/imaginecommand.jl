@@ -60,8 +60,8 @@ function show(io::IO, com::ImagineCommand)
     print(io, "           Channel name: $(name(com))\n")
     print(io, "               Raw type: $(rawtype(com))\n")
     print(io, "              Intervals: $(intervals(com))\n")
+    print(io, "               Duration: $(length(com)/samprate(com))")
     print(io, "      Duration(samples): $(length(com))\n")
-    print(io, "      Duration(seconds): $(length(com)*mapper(com).time_interval)")
 end
 
 Base.length(com::ImagineCommand) = isempty(com) ? 0 : com.cumlength[end]
@@ -93,12 +93,11 @@ interval_raw(com::ImagineCommand) = interval_raw(mapper(com))
 interval_volts(com::ImagineCommand) = interval_volts(mapper(com))
 interval_world(com::ImagineCommand) = interval_world(mapper(com))
 cumlength(com::ImagineCommand) = com.cumlength
-#assumes rate is in samples per second
-sample_rate(com::ImagineCommand) = sample_rate(mapper(com))
-set_sample_rate!(com::ImagineCommand, r::Int) = set_sample_rate!(mapper(com), r)
+samprate(com::ImagineCommand) = samprate(mapper(com))
+set_samprate!(com::ImagineCommand, r::Int) = set_samprate!(mapper(com), r)
 
 #In the JSON arrays, waveforms and counts-of-waves are specified in alternating order: count,wave,count,wave...
-function ImagineCommand(rig_name::String, chan_name::String, seqs_compressed::RLEVec, seqs_lookup::Dict, samprate::Int)
+function ImagineCommand(rig_name::String, chan_name::String, seqs_compressed::RLEVec, seqs_lookup::Dict, samprate::HasInverseTimeUnits)
     seqlist = RLEVec[]
     seqnames = String[]
     for s in seqs_compressed
@@ -122,15 +121,17 @@ end
 
 recalculate_cumlength!(com) = calc_cumlength!(com.cumlength, sequences(com))
 
-function ImagineCommand(rig_name::String, chan_name::String, seqs, seqnames::Vector{String}, seqs_lookup::Dict, samprate::Int)
+function ImagineCommand(rig_name::String, chan_name::String, seqs, seqnames::Vector{String}, seqs_lookup::Dict, samprate::HasInverseTimeUnits)
     cumlen = zeros(Int, length(seqs))
     calc_cumlength!(cumlen, seqs)
     return ImagineCommand(chan_name, seqs, seqnames, seqs_lookup, cumlen, default_samplemapper(rig_name, chan_name; samprate = samprate))
 end
 
-function decompress(com::ImagineCommand, tstart::Unitful.Time, tstop::Unitful.Time; sampmap=:world)
-    istart = ceil(Int64, (tstart / mapper(com).time_interval)+1)
-    istop = floor(Int64, (tstop / mapper(com).time_interval)+1)
+function decompress(com::ImagineCommand, tstart::HasTimeUnits, tstop::HasTimeUnits; sampmap=:world)
+    tstart = uconvert(unit(inv(samprate(com))), tstart)
+    tstop = uconvert(unit(inv(samprate(com))), tstop)
+    istart = ceil(Int64, tstart * samprate(com))
+    istop = floor(Int64, tstop * samprate(com))
     return decompress(com, istart, istop; sampmap=sampmap)
 end
 
@@ -139,6 +140,7 @@ function decompress(com::ImagineCommand, istart::Int, istop::Int; sampmap=:world
         error("Unrecognized sample mapping")
     end
     @assert istart <= istop
+    nsamps = istop - istart + 1
     datm = decompress_raw(com, istart, istop)
 
     if sampmap == :world || sampmap == :volts
@@ -151,9 +153,9 @@ function decompress(com::ImagineCommand, istart::Int, istop::Int; sampmap=:world
         f1inv = world2volts(mapper(com))
         datm = mappedarray((f1, f1inv), datm)
     end
-    tstart = (istart-1) * mapper(com).time_interval
-    tstop = (istop-1) * mapper(com).time_interval
-    ax = Axis{:time}(tstart:mapper(com).time_interval:tstop)
+    tstart = (istart-1) / samprate(com)
+    tstop = (istop-1) / samprate(com)
+    ax = Axis{:time}(linspace(tstart, tstop, nsamps))
     return AxisArray(datm, ax)
 end
 
@@ -259,9 +261,9 @@ function compress{T}(input::AbstractVector{T})
 end
 compress(input::RLEVector) = input
 
-compress{Traw, TW, TT}(seq::AbstractVector{Traw}, mapper::SampleMapper{Traw, TW, TT}) = compress!(RepeatedValue{Traw}[], seq)
-compress{Traw, TW, TT}(seq::AbstractVector{typeof(0.0*Unitful.V)}, mapper::SampleMapper{Traw, TW, TT}) = compress!(RepeatedValue{Traw}[], mappedarray(volts2raw(mapper), seq))
-compress{Traw, TW, TT}(seq::AbstractVector{TW}, mapper::SampleMapper{Traw, TW, TT}) = compress!(RepeatedValue{Traw}[], mappedarray(world2raw(mapper), seq))
+compress{Traw, TW}(seq::AbstractVector{Traw}, mapper::SampleMapper{Traw, TW}) = compress!(RepeatedValue{Traw}[], seq)
+compress{Traw, TW, TV<:HasVoltageUnits}(seq::AbstractVector{TV}, mapper::SampleMapper{Traw, TW}) = compress!(RepeatedValue{Traw}[], mappedarray(volts2raw(mapper), seq))
+compress{Traw, TW}(seq::AbstractVector{TW}, mapper::SampleMapper{Traw, TW}) = compress!(RepeatedValue{Traw}[], mappedarray(world2raw(mapper), seq))
 
 function append!(com::ImagineCommand, seqname::String)
     seqdict = sequence_lookup(com)

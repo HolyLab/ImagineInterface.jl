@@ -45,7 +45,7 @@ function issimilar(com1::ImagineCommand, com2::ImagineCommand; ignore_time=false
         issim = false
     end
     if !ignore_time
-        if length(com1) != length(com2) || sample_rate(com1) != sample_rate(com2)
+        if length(com1) != length(com2) || samprate(com1) != samprate(com2)
             issim = false
         end
     end
@@ -72,9 +72,9 @@ function validate(coms::Vector{ImagineCommand}, rig::AbstractString)
         end
     end
     #check that all have equal sample rate
-    rs = map(sample_rate,coms)
+    rs = map(samprate,coms)
     if !all(rs.==rs[1])
-        error("All commands must use equal sample rates.  This can be set per-channel with `set_sample_rate!`")
+        error("All commands must use equal sample rates.  This can be set per-channel with `set_samprate!`")
     end
     #check that all have equal number of samples OR that they have zero samples? (unused)
     nsamps = map(length, coms)
@@ -116,7 +116,10 @@ function build_outdict(coms::Vector{ImagineCommand}, rig::String)
     out_dict[ANALOG_KEY] = ana_dict
     out_dict[DIGITAL_KEY] = dig_dict
     out_dict[COMPONENT_KEY] = seq_lookup
-    out_dict[METADATA_KEY] = Dict("sample rate" => sample_rate(coms[1]), "rig" => rig)
+    sampr = ustrip(uconvert(Unitful.s^-1, samprate(coms[1])))
+    @assert isa(sampr, Integer) #TODO: Check for samprate beyond DAQ's capability
+    out_dict[METADATA_KEY] = Dict("sample rate" => sampr,
+                                        "rig" => rig)
     for c in coms
         #if isdigital(c) && !isempty(c)
         if isdigital(c)

@@ -3,4 +3,6 @@ AxisArrays
 IntervalSets
 Unitful
 MappedArrays
+Plots
+UnitfulPlots
 Compat 0.18

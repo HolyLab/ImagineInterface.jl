@@ -2,30 +2,43 @@ using Base.Test
 
 using JSON, Unitful, AxisArrays
 using ImagineInterface
+import ImagineInterface.METADATA_KEY
 
 #test reading
 fname = "../examples/controls_triangle.json"
-nsamps = 70000
 
 #analog
 d = JSON.parsefile(fname)
-pos = parse_command(d, "positioner1")
-pos0 = parse_command(fname, "positioner1")
+pos = parse_command(d, "axial piezo")
+pos0 = parse_command(fname, "axial piezo")
+nsamps = d[METADATA_KEY]["sample num"]
 @test length(pos) == length(pos0) == nsamps
-@test name(pos) == name(pos0) == "positioner1"
+@test name(pos) == name(pos0) == "axial piezo"
 @test isdigital(pos) == false
+
+sample_rate = d[METADATA_KEY]["samples per second"]
+@test sample_rate*Unitful.s^-1 == samprate(pos)
+
+rig = d[METADATA_KEY]["rig"]
+@test rig_name(pos) == rig
+
 allcoms = parse_commands(fname)
+cam = getcameras(allcoms)[1]
+nframes = d[METADATA_KEY]["frames per stack"]
+nstacks = d[METADATA_KEY]["stacks"]
+@test nframes*nstacks == count_pulses(cam)
 
 #digital
-las1 = getname(allcoms, "laser1")
+nm = "405nm laser"
+las1 = getname(allcoms, nm)
 @test isdigital(las1) == true
-@test name(las1) == "laser1"
+@test name(las1) == nm
 @test length(las1) == nsamps
 
 #decompression
 #world-mapped, analog
 sampsa0 = decompress(pos, 1, nsamps; sampmap=:world)
-sampsa = decompress(getname(allcoms, "positioner1") , 1, nsamps; sampmap=:world)
+sampsa = decompress(getname(allcoms, "axial piezo") , 1, nsamps; sampmap=:world)
 @test length(sampsa) == nsamps
 @test all(sampsa0.==sampsa)
 
@@ -34,7 +47,7 @@ axs = axes(sampsa)
 @test length(axs) == 1
 axsv = axisvalues(axs[1])
 @test length(axsv) == 1
-@test axsv[1] == linspace(0.0*Unitful.s,6.9999*Unitful.s,70000)
+@test axsv[1] == linspace(0.0*Unitful.s,6.9999*Unitful.s,nsamps)
 
 #voltage-mapped, analog
 sampsa = decompress(pos, 1, nsamps; sampmap=:volts)
@@ -67,7 +80,8 @@ angs = getanalog(allcoms)
 
 #write
 outname = "test.json"
-write_commands(outname, "ocpi2", allcoms)
+exp_time = d[METADATA_KEY]["exposure time in seconds"] * Unitful.s
+write_commands(outname, allcoms, nstacks, nframes, exp_time; isbidi = false)
 allcoms2 = parse_commands(outname)
 sp = sortperm(map(name,allcoms)) #sort alphabetically to compare
 sp2 = sortperm(map(name,allcoms2))
@@ -75,17 +89,17 @@ sp2 = sortperm(map(name,allcoms2))
 rm(outname)
 
 #build commands from template
-ocpi1 = rigtemplate("ocpi1"; samprate = 20000*Unitful.s^-1)
+ocpi1 = rigtemplate("ocpi1"; sample_rate = 20000*Unitful.s^-1)
 @test length(getcameras(ocpi1)) == 1
 @test length(getlasers(ocpi1)) == 1
 @test length(getpositioners(ocpi1)) == 1
-@test length(getstimuli(ocpi1)) == 8
+@test length(getstimuli(ocpi1)) == 6
 
-ocpi2 = rigtemplate("ocpi2"; samprate = 20000*Unitful.s^-1)
+ocpi2 = rigtemplate("ocpi2"; sample_rate = 20000*Unitful.s^-1)
 @test length(getcameras(ocpi2)) == 2
 @test length(getlasers(ocpi2)) == 5
-@test length(getpositioners(ocpi2)) == 1
-@test length(getstimuli(ocpi2)) == 8
+@test length(getpositioners(ocpi2)) == 2
+@test length(getstimuli(ocpi2)) == 25
 
 @test samprate(ocpi2[1]) == 20000*Unitful.s^-1
 @test all(x->x==0, map(length, ocpi2))

@@ -38,6 +38,8 @@ end
 
 type ImagineCommand
     chan_name::String
+    daq_chan_name::String
+    rig_name::String
     sequences::Vector{RLEVec}
     sequence_names::Vector{String}
     sequence_lookup::Dict
@@ -58,9 +60,11 @@ function show(io::IO, com::ImagineCommand)
         print(io, " encoding values from $(mapper(com).worldmin) to $(mapper(com).worldmax)\n")
     end
     print(io, "           Channel name: $(name(com))\n")
+    print(io, "            DAQ Channel: $(daq_channel(com))\n")
+    print(io, "                    Rig: $(rig_name(com))\n")
     print(io, "               Raw type: $(rawtype(com))\n")
     print(io, "              Intervals: $(intervals(com))\n")
-    print(io, "               Duration: $(length(com)/samprate(com))")
+    print(io, "               Duration: $(length(com)/samprate(com))\n")
     print(io, "      Duration(samples): $(length(com))\n")
 end
 
@@ -80,6 +84,8 @@ function ==(com1::ImagineCommand, com2::ImagineCommand)
 end
 
 name(com::ImagineCommand) = com.chan_name
+daq_channel(com::ImagineCommand) = com.daq_chan_name
+rig_name(com::ImagineCommand) = com.rig_name
 rawtype(com::ImagineCommand) = rawtype(mapper(com))
 worldtype(com::ImagineCommand) = worldtype(mapper(com))
 isdigital(com::ImagineCommand) = typeof(mapper(com).worldmin) == Bool
@@ -97,7 +103,7 @@ samprate(com::ImagineCommand) = samprate(mapper(com))
 set_samprate!(com::ImagineCommand, r::Int) = set_samprate!(mapper(com), r)
 
 #In the JSON arrays, waveforms and counts-of-waves are specified in alternating order: count,wave,count,wave...
-function ImagineCommand(rig_name::String, chan_name::String, seqs_compressed::RLEVec, seqs_lookup::Dict, samprate::HasInverseTimeUnits)
+function ImagineCommand(rig_name::String, chan_name::String, daq_chan_name::String, seqs_compressed::RLEVec, seqs_lookup::Dict, sample_rate::HasInverseTimeUnits)
     seqlist = RLEVec[]
     seqnames = String[]
     for s in seqs_compressed
@@ -106,7 +112,11 @@ function ImagineCommand(rig_name::String, chan_name::String, seqs_compressed::RL
             push!(seqnames, s.value)
         end
     end
-    return ImagineCommand(rig_name, chan_name, seqlist, seqnames, seqs_lookup, samprate)
+    cumlen = zeros(Int, length(seqlist))
+    calc_cumlength!(cumlen, seqlist)
+    sampmapper = default_samplemapper(rig_name, daq_chan_name; sample_rate = sample_rate)
+    return ImagineCommand(chan_name, daq_chan_name, rig_name, seqlist, seqnames, seqs_lookup, cumlen, sampmapper)
+#    return ImagineCommand(rig_name, chan_name, daq_chan_name, seqlist, seqnames, seqs_lookup, sample_rate)
 end
 
 function calc_cumlength!{RV<:RLEVec}(output::Vector{Int}, seqs::Vector{RV})
@@ -121,11 +131,11 @@ end
 
 recalculate_cumlength!(com) = calc_cumlength!(com.cumlength, sequences(com))
 
-function ImagineCommand(rig_name::String, chan_name::String, seqs, seqnames::Vector{String}, seqs_lookup::Dict, samprate::HasInverseTimeUnits)
-    cumlen = zeros(Int, length(seqs))
-    calc_cumlength!(cumlen, seqs)
-    return ImagineCommand(chan_name, seqs, seqnames, seqs_lookup, cumlen, default_samplemapper(rig_name, chan_name; samprate = samprate))
-end
+#function ImagineCommand(rig_name::String, chan_name::String, daq_chan_name::String, seqs, seqnames::Vector{String}, seqs_lookup::Dict, sample_rate::HasInverseTimeUnits)
+#    cumlen = zeros(Int, length(seqs))
+#    calc_cumlength!(cumlen, seqs)
+#    return ImagineCommand(chan_name, daq_chan_name, rig_name, seqs, seqnames, seqs_lookup, cumlen, default_samplemapper(rig_name, chan_name; sample_rate = sample_rate))
+#end
 
 function decompress(com::ImagineCommand, tstart::HasTimeUnits, tstop::HasTimeUnits; sampmap=:world)
     tstart = uconvert(unit(inv(samprate(com))), tstart)
@@ -158,6 +168,8 @@ function decompress(com::ImagineCommand, istart::Int, istop::Int; sampmap=:world
     ax = Axis{:time}(linspace(tstart, tstop, nsamps))
     return AxisArray(datm, ax)
 end
+
+decompress(com::ImagineCommand; sampmap=:world) = decompress(com, 1, length(com); sampmap=sampmap)
 
 function decompress_raw(com::ImagineCommand, istart::Int, istop::Int)
     if istart < 1 || istop > length(com) #bounds check
@@ -299,6 +311,18 @@ function append!{T}(com::ImagineCommand, seqname::String, sequence::AbstractVect
 	push!(sequences(com), cseq)
 	push!(sequence_names(com), seqname)
         push!(cumlength(com), length(com) + length(sequence))
+    end
+    return com
+end
+
+#Repeat the entire sequence currently described by com nreps times
+#(Equivalent to calling append!(com, seqname) nreps times when seqname is the only sequence in com)
+function replicate!(com::ImagineCommand, nreps::Int)
+    names_to_append = deepcopy(sequence_names(com))
+    for n = 1:nreps
+        for nm in names_to_append
+            append!(com, nm)
+        end
     end
     return com
 end

@@ -2,9 +2,11 @@ module ImagineInterface
 
 using JSON, Unitful
 using MappedArrays, AxisArrays, IntervalSets
+using Plots, UnitfulPlots
 using Compat
 
 import Base: convert, show, length, size, isempty, ==, append!, pop!, empty! #, scale
+import Plots: plot
 
 using Unitful: μm, s, V
 @compat const HasVoltageUnits{T,U} = Quantity{T, typeof(0.0V).parameters[2], U}
@@ -18,12 +20,16 @@ include("constants.jl")
 include("hardware.jl")
 include("convenience.jl")
 include("parse.jl")
+include("sequence_analysis.jl")
 include("write.jl")
 include("stack.jl")
+include("plot.jl")
 
 #imaginecommand.jl
 export ImagineCommand,
         name,
+        daq_channel,
+        rig_name,
 	rawtype,
         worldtype,
         samprate,
@@ -37,10 +43,15 @@ export ImagineCommand,
 	sequence_lookup,
         mapper,
         decompress,
-        replace!
+        replace!,
+        replicate!
 
 #constants.jl
 export rigtemplate
+
+#hardware.jl
+export chip_size,
+        max_framerate
 
 #convenience.jl
 export getname,
@@ -55,6 +66,11 @@ export getname,
 export parse_command,
         parse_commands
 
+#sequence_analysis.jl
+export find_pulse_starts,
+        find_pulse_stops,
+        count_pulses
+
 #write.jl
 export write_commands
 
@@ -64,6 +80,8 @@ export gen_sweep,
         gen_bidi_pos,
         spaced_intervals,
         gen_pulses,
-        scale
+        scale,
+        gen_bidirectional_stack,
+        gen_unidirectional_stack
 
 end #module

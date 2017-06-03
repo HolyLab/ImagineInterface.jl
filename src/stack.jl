@@ -2,22 +2,22 @@ using Ranges #delete this when we drop 0.5 support
 
 #The sweep covers an interval that is closed on the left and open on the right.
 #i.e. a sweep from 0 to 10 will include a sample at 0 but not at 10
-function gen_sweep(pmin::HasLengthUnits, pmax::HasLengthUnits, tsweep::HasTimeUnits, samprate::HasInverseTimeUnits)
+function gen_sweep(pmin::HasLengthUnits, pmax::HasLengthUnits, tsweep::HasTimeUnits, sample_rate::HasInverseTimeUnits)
     tsweeps = uconvert(Unitful.s, tsweep)
     pminum = uconvert(Unitful.μm, pmin)
     pmaxum = uconvert(Unitful.μm, pmax)
-    nsamps = round(Int, tsweeps*samprate)
+    nsamps = round(Int, tsweeps*sample_rate)
     increment = (pmaxum - pminum) / nsamps
     return Ranges.linspace(pminum, pmaxum-increment, nsamps)
 end
 
 #Generate sets of samples describing the motion of the positioner during one stack
-function gen_sawtooth(pmin::HasLengthUnits, pmax::HasLengthUnits, tfwd::HasTimeUnits, treset::HasTimeUnits, samprate::HasInverseTimeUnits)
-    fwd_linspace = gen_sweep(pmin, pmax, tfwd, samprate)
-    reset_linspace = gen_sweep(pmax, pmin, treset, samprate)
+function gen_sawtooth(pmin::HasLengthUnits, pmax::HasLengthUnits, tfwd::HasTimeUnits, treset::HasTimeUnits, sample_rate::HasInverseTimeUnits)
+    fwd_linspace = gen_sweep(pmin, pmax, tfwd, sample_rate)
+    reset_linspace = gen_sweep(pmax, pmin, treset, sample_rate)
     return fwd_linspace, reset_linspace
 end
-gen_bidi_pos(pmin::HasLengthUnits, pmax::HasLengthUnits, tsweep::HasTimeUnits, samprate::HasInverseTimeUnits) = gen_sawtooth(pmin, pmax, tsweep, tsweep, samprate)
+gen_bidi_pos(pmin::HasLengthUnits, pmax::HasLengthUnits, tsweep::HasTimeUnits, sample_rate::HasInverseTimeUnits) = gen_sawtooth(pmin, pmax, tsweep, tsweep, sample_rate)
 
 #returns a vector of sample-index intervals separated by `interval_spacing`.
 #The first interval is offset from the first sample of the sampled region by the `offset` keyword arg
@@ -93,4 +93,84 @@ function scale(input::ClosedInterval{Int}, frac::Float64)
     return ClosedInterval(ctr - halfw_new, ctr + halfw_new)
 end
 
+function gen_bidirectional_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverseTimeUnits}(pmin::TL, pmax::TL, z_spacing::TL, stack_time::TT, exp_time::TT, sample_rate::TTI, flash_frac::Real; z_pad::TL = 1.0*Unitful.μm)
+    flash = true
+    if flash_frac > 1
+        warn("las_frac was set greater than 1, so defaulting to keeping laser on throughout the stack")
+        flash = false
+    elseif flash_frac <= 0
+        error("las_frac must be positive")
+    end
 
+    pmin = uconvert(Unitful.μm, pmin)
+    pmax = uconvert(Unitful.μm, pmax)
+    z_spacing = uconvert(Unitful.μm, z_spacing)
+    z_pad = uconvert(Unitful.μm, z_pad)
+
+    stack_time = uconvert(Unitful.s, stack_time)
+    exp_time = uconvert(Unitful.s, exp_time)
+    sample_rate = uconvert(inv(Unitful.s), sample_rate)
+
+    nsamps_stack = ceil(Int, stack_time*sample_rate)
+    posfwd, posback = gen_bidi_pos(pmin, pmax, stack_time, sample_rate)
+    #offset by one sample going forward so that we don't use the end points of the triangle
+    delay1samp = 1/sample_rate
+
+    exp_intervals_fwd = spaced_intervals(posfwd, z_spacing, exp_time, 1/sample_rate; delay=delay1samp, z_pad = z_pad, alignment=:start)
+    exp_intervals_back = spaced_intervals(posback, z_spacing, exp_time, 1/sample_rate; delay=0.0*Unitful.s, z_pad = z_pad, alignment=:stop)
+    
+    if flash
+        las_intervals_fwd = map(x->scale(x, flash_frac), exp_intervals_fwd)
+        lasfwd = gen_pulses(nsamps_stack, las_intervals_fwd)
+        #samps_las_back = gen_pulses(nsamps_stack, las_intervals_back) #this can be off-by-one sample due to rounding in the scale function
+        lasback = reverse(circshift(lasfwd,-1)) 
+    else
+        lasfwd = fill(true, length(posfwd))
+        lasback = fill(true, length(posback))
+    end
+
+    camfwd = gen_pulses(nsamps_stack, exp_intervals_fwd)
+    camback = gen_pulses(nsamps_stack, exp_intervals_back)
+
+    output = Dict("positioner" => vcat(posfwd, posback), "camera" => vcat(camfwd, camback), "laser" => vcat(lasfwd, lasback), "nframes" => length(exp_intervals_fwd)*2)
+
+    return output
+end
+
+function gen_unidirectional_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverseTimeUnits}(pmin::TL, pmax::TL, z_spacing::TL, stack_time::TT, reset_time::TT, exp_time::TT, sample_rate::TTI, flash_frac::Real; z_pad::TL = 1.0*Unitful.μm)
+    flash = true
+    if flash_frac > 1
+        warn("las_frac was set greater than 1, so defaulting to keeping laser on throughout the stack")
+        flash = false
+    elseif flash_frac <= 0
+        error("las_frac must be positive")
+    end
+
+    pmin = uconvert(Unitful.μm, pmin)
+    pmax = uconvert(Unitful.μm, pmax)
+    z_spacing = uconvert(Unitful.μm, z_spacing)
+    z_pad = uconvert(Unitful.μm, z_pad)
+
+    stack_time = uconvert(Unitful.s, stack_time)
+    exp_time = uconvert(Unitful.s, exp_time)
+    sample_rate = uconvert(inv(Unitful.s), sample_rate)
+
+    nsamps_stack = ceil(Int, stack_time*sample_rate)
+    posfwd, posreset = gen_sawtooth(pmin, pmax, stack_time, reset_time, sample_rate)
+
+    exp_intervals = spaced_intervals(posfwd, z_spacing, exp_time, 1/sample_rate; z_pad = z_pad, alignment=:start)
+    
+    if flash
+        las_intervals = map(x->scale(x, flash_frac), exp_intervals)
+        lasfwd = gen_pulses(nsamps_stack, las_intervals)
+    else
+        lasfwd = fill(true, length(posfwd))
+    end
+
+    camfwd = gen_pulses(nsamps_stack, exp_intervals)
+    reset_digi = fill(false, length(posreset))
+
+    output = Dict("positioner" => vcat(posfwd, posreset), "camera" => vcat(camfwd, reset_digi), "laser" => vcat(lasfwd, reset_digi), "nframes" => length(exp_intervals))
+
+    return output
+end

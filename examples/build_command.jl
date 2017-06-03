@@ -1,10 +1,11 @@
-using ImagineInterface
+using ImagineInterface, Unitful
 
 #Begin with a microscope-specific template of empty commands
 #Currently all output channels must use the same sampling rate
 #Here we choose 10k samples per second
 scope_name = "ocpi2"
-ocpi2 = rigtemplate("ocpi2"; samprate = 10000) #This is just an array of ImagineCommands, one for each controllable signal on OCPI2
+ocpi2 = rigtemplate("ocpi2"; sample_rate = 10000*s^-1) #This is just an array of ImagineCommands, one for each controllable signal on OCPI2
+
 
 #Let's add samples to the positioner trace
 positioners = getpositioners(ocpi2) #returns an array of length 1

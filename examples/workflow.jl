@@ -5,7 +5,7 @@ sample_rate = 50000*Unitful.s^-1 #analog output samples per second
 				#Currently all output channels must use the same sample rate
 				#Currently this also sets the analog input rate in Imagine
 				#High-framerate recordings should use a high sample rate.
-rig = "ocpi2"
+rig = "ocpi-2"
 ocpi2 = rigtemplate(rig; sample_rate = sample_rate)
 @show ocpi2 #This is a vector where each element is an empty ImagineCommand
 #We can edit commands individually by extracting them from this array.

@@ -3,8 +3,8 @@ using ImagineInterface, Unitful
 #Begin with a microscope-specific template of empty commands
 #Currently all output channels must use the same sampling rate
 #Here we choose 10k samples per second
-scope_name = "ocpi2"
-ocpi2 = rigtemplate("ocpi2"; sample_rate = 10000*s^-1) #This is just an array of ImagineCommands, one for each controllable signal on OCPI2
+scope_name = "ocpi-2"
+ocpi2 = rigtemplate("ocpi-2"; sample_rate = 10000*s^-1) #This is just an array of ImagineCommands, one for each controllable signal on OCPI2
 
 
 #Let's add samples to the positioner trace
@@ -83,7 +83,7 @@ replace!(pos, "sweep_up", fill(800.0*Unitful.μm, 1000))
 #Note that this will throw an error if the commands differ in the number of samples or if commands don't correspond
 #to those expected by the "ocpi2" template
 
-write_commands("commands.json", "ocpi2", ocpi2)
+write_commands("commands.json", "ocpi-2", ocpi2)
 
 #If you want to load a command file created in Julia or by Imagine
 coms = parse_commands("commands.json") # == ocpi2

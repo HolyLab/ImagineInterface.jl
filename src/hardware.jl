@@ -47,35 +47,35 @@ const ocpi2_mappings = Dict("AO0"=>"axial piezo",
                       "P0.30"=>"stimulus24",
                       "P0.31"=>"stimulus25")
 
-const DEFAULT_DAQCHANS_TO_NAMES = Dict("ocpi1" => ocpi1_mappings,
-                                      "ocpi2" => ocpi2_mappings)
-const DEFAULT_NAMES_TO_DAQCHANS = Dict("ocpi1" => map(reverse, ocpi1_mappings),
-                                      "ocpi2" => map(reverse, ocpi2_mappings))
+const DEFAULT_DAQCHANS_TO_NAMES = Dict("ocpi-1" => ocpi1_mappings,
+                                      "ocpi-2" => ocpi2_mappings)
+const DEFAULT_NAMES_TO_DAQCHANS = Dict("ocpi-1" => map(reverse, ocpi1_mappings),
+                                      "ocpi-2" => map(reverse, ocpi2_mappings))
 #Lists of positioner daq channels                                      
-const ocpi1_poschans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi1"][x], ["axial piezo"])
-const ocpi2_poschans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi2"][x], ["axial piezo"; "horizontal piezo"])
-const POS_CHANS= Dict("ocpi1" => ocpi1_poschans,
-                      "ocpi2" => ocpi2_poschans)
+const ocpi1_poschans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-1"][x], ["axial piezo"])
+const ocpi2_poschans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-2"][x], ["axial piezo"; "horizontal piezo"])
+const POS_CHANS= Dict("ocpi-1" => ocpi1_poschans,
+                      "ocpi-2" => ocpi2_poschans)
 #Lists of camera daq channels                                      
-const ocpi1_camchans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi1"][x], ["camera1"])
-const ocpi2_camchans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi2"][x], ["camera1"; "camera2"])
-const CAM_CHANS= Dict("ocpi1" => ocpi1_camchans,
-                      "ocpi2" => ocpi2_camchans)
+const ocpi1_camchans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-1"][x], ["camera1"])
+const ocpi2_camchans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-2"][x], ["camera1"; "camera2"])
+const CAM_CHANS= Dict("ocpi-1" => ocpi1_camchans,
+                      "ocpi-2" => ocpi2_camchans)
 #Lists of laser daq channels                                      
-const ocpi1_laschans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi1"][x], ["488nm laser shutter"])
-const ocpi2_laschans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi2"][x], ["405nm laser"; "445nm laser"; "488nm laser"; "514nm laser"; "561nm laser"])
-const LAS_CHANS= Dict("ocpi1" => ocpi1_laschans,
-                      "ocpi2" => ocpi2_laschans)
+const ocpi1_laschans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-1"][x], ["488nm laser shutter"])
+const ocpi2_laschans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-2"][x], ["405nm laser"; "445nm laser"; "488nm laser"; "514nm laser"; "561nm laser"])
+const LAS_CHANS= Dict("ocpi-1" => ocpi1_laschans,
+                      "ocpi-2" => ocpi2_laschans)
 #Lists of (digital) stimulus daq channels                                      
-const ocpi1_stimchans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi1"][x], ["stimulus$x" for x = 1:6])
-const ocpi2_stimchans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi2"][x], ["stimulus$x" for x = 1:25])
-const STIM_CHANS= Dict("ocpi1" => ocpi1_stimchans,
-                      "ocpi2" => ocpi2_stimchans)
+const ocpi1_stimchans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-1"][x], ["stimulus$x" for x = 1:6])
+const ocpi2_stimchans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-2"][x], ["stimulus$x" for x = 1:25])
+const STIM_CHANS= Dict("ocpi-1" => ocpi1_stimchans,
+                      "ocpi-2" => ocpi2_stimchans)
 
 #These names aren't allowed to be changed by users when writing command files
 const ocpi1_fixed_names = ["axial piezo", "488nm laser shutter", "camera1"]
 const ocpi2_fixed_names = ["axial piezo", "horizontal piezo", "camera1", "camera2", "405nm laser", "443nm laser", "488 nm laser", "514nm laser", "561nm laser"]
-const FIXED_NAMES = Dict("ocpi1" => ocpi1_fixed_names, "ocpi2" => ocpi2_fixed_names)
+const FIXED_NAMES = Dict("ocpi-1" => ocpi1_fixed_names, "ocpi-2" => ocpi2_fixed_names)
 
 function default_samplemapper(rig_name::String, daq_chan_name::String; sample_rate = 10000s^-1)
     if iscam(daq_chan_name, rig_name) || islas(daq_chan_name, rig_name) || isstim(daq_chan_name, rig_name)
@@ -96,8 +96,8 @@ function ttl_samplemapper{U}(; sample_rate::HasInverseTimeUnits{Int, U}=10000s^-
     return SampleMapper(UInt8(false), UInt8(true), 0.0*Unitful.V, 3.3*Unitful.V, false, true, sample_rate)
 end
 
-const default_piezo_ranges = Dict("ocpi1"=>(0.0μm .. 400.0μm, 0.0V .. 10.0V),
-                                  "ocpi2"=>(0.0μm .. 800.0μm, 0.0V .. 10.0V))
+const default_piezo_ranges = Dict("ocpi-1"=>(0.0μm .. 400.0μm, 0.0V .. 10.0V),
+                                  "ocpi-2"=>(0.0μm .. 800.0μm, 0.0V .. 10.0V))
 
 #returns an array of empty ImagineCommands, one for each channel accessible to OCPI2 users
 function rigtemplate{U}(rig::String; sample_rate::HasInverseTimeUnits{Int,U} = 10000s^-1)
@@ -132,10 +132,10 @@ end
 
 const PCO_EDGE_5_5_CHIP_SIZE = (2560, 2160)
 const PCO_EDGE_4_2_CHIP_SIZE = (2060, 2048) #We use the (older) CameraLink version (without the new sensor)
-const RIG_CHIP_SIZES = Dict("ocpi1" => PCO_EDGE_5_5_CHIP_SIZE, "ocpi2" => PCO_EDGE_4_2_CHIP_SIZE)
+const RIG_CHIP_SIZES = Dict("ocpi-1" => PCO_EDGE_5_5_CHIP_SIZE, "ocpi-2" => PCO_EDGE_4_2_CHIP_SIZE)
 const PCO_EDGE_5_5_FRAMERATE_FUNC = x::Tuple{Int,Int} -> 100 * 2^(log(2, 2048/x[2]))
 const PCO_EDGE_4_2_FRAMERATE_FUNC = x::Tuple{Int,Int} -> 100 * 2^(log(2, 2048/x[2]))
-const RIG_FRAMERATE_FUNCS = Dict("ocpi1" => PCO_EDGE_5_5_FRAMERATE_FUNC, "ocpi2" => PCO_EDGE_4_2_FRAMERATE_FUNC)
+const RIG_FRAMERATE_FUNCS = Dict("ocpi-1" => PCO_EDGE_5_5_FRAMERATE_FUNC, "ocpi-2" => PCO_EDGE_4_2_FRAMERATE_FUNC)
 
 #For querying camera-related info
 function chip_size(rig::String)

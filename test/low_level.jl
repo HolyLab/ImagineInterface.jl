@@ -89,13 +89,13 @@ sp2 = sortperm(map(name,allcoms2))
 rm(outname)
 
 #build commands from template
-ocpi1 = rigtemplate("ocpi1"; sample_rate = 20000*Unitful.s^-1)
+ocpi1 = rigtemplate("ocpi-1"; sample_rate = 20000*Unitful.s^-1)
 @test length(getcameras(ocpi1)) == 1
 @test length(getlasers(ocpi1)) == 1
 @test length(getpositioners(ocpi1)) == 1
 @test length(getstimuli(ocpi1)) == 6
 
-ocpi2 = rigtemplate("ocpi2"; sample_rate = 20000*Unitful.s^-1)
+ocpi2 = rigtemplate("ocpi-2"; sample_rate = 20000*Unitful.s^-1)
 @test length(getcameras(ocpi2)) == 2
 @test length(getlasers(ocpi2)) == 5
 @test length(getpositioners(ocpi2)) == 2

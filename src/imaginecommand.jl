@@ -3,6 +3,9 @@ immutable RepeatedValue{T}
     value::T
 end
 
+value{T}(rv::RepeatedValue{T}) = rv.value
+count{T}(rv::RepeatedValue{T}) = rv.n
+
 convert{T}(::Type{RepeatedValue{T}}, rv::RepeatedValue) = RepeatedValue{T}(rv.n, rv.value)
 
 "RLEVector is a run-length encoded vector"
@@ -140,8 +143,8 @@ recalculate_cumlength!(com) = calc_cumlength!(com.cumlength, sequences(com))
 function decompress(com::ImagineCommand, tstart::HasTimeUnits, tstop::HasTimeUnits; sampmap=:world)
     tstart = uconvert(unit(inv(samprate(com))), tstart)
     tstop = uconvert(unit(inv(samprate(com))), tstop)
-    istart = ceil(Int64, tstart * samprate(com))
-    istop = floor(Int64, tstop * samprate(com))
+    istart = ceil(Int64, tstart * samprate(com))+1
+    istop = floor(Int64, tstop * samprate(com))+1
     return decompress(com, istart, istop; sampmap=sampmap)
 end
 
@@ -289,7 +292,7 @@ function append!(com::ImagineCommand, seqname::String)
 	push!(sequences(com), newseq)
         lseq = 0
         if seqi == 0 #we didn't use this sequence yet
-            lseq = sum(newseq[1:2:end])
+            lseq = sum(map(count, newseq))
         elseif seqi == 1
             lseq = cumlength(com)[1]
         else

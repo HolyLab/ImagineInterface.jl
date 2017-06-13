@@ -178,7 +178,7 @@ function write_commands(fname::String, coms::Vector{ImagineCommand}, nstacks::In
     check_sufficiency(coms_used)
     check_samptypes(coms_used, rig)
     #check_speed_limits(coms_used, rig) #TODO: implement this
-    print("Writing commands for the following channels: $(map(name, coms)) \n")
+    print("Writing commands for the following channels: $(map(name, coms_used)) \n")
     out_dict = build_outdict(coms_used, rig, nstacks, nframes, exp_time, isbidi)
     f = open(fname, "w")
     JSON.print(f, out_dict)

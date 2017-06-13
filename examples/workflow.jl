@@ -101,7 +101,7 @@ append!(cam1, "uni_stack_cam1", d["camera"])
 
 using Plots, UnitfulPlots
 #There is a special plot method that lets you visualize all commands.  Currently it groups commands in multiple plot windows base on hardware
-plot(ocpi2)
+plot(ocpi2) #note that this currently won't display when you run the script via include("workflow.jl") Type or paste the command in the terminal to see the plot
 
 #If you are satisfied with the waveform created and would like to duplicate it many times for a multi-stack acquisition with Imagine...
 replicate!(pos, 9) #appends the current contents of pos 9 times to the end of pos

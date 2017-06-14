@@ -12,7 +12,7 @@ const ocpi1_mappings = Dict("AO0"=>"axial piezo",
 
 const ocpi2_mappings = Dict("AO0"=>"axial piezo",
                       "AO1"=>"horizontal piezo",
-                      "A02"=>"analogout3",
+                      "AO2"=>"analogout3",
                       "AO3"=>"analogout4",
                       "P0.0"=>"stimulus1",
                       "P0.1"=>"stimulus2",
@@ -51,7 +51,13 @@ const DEFAULT_DAQCHANS_TO_NAMES = Dict("ocpi-1" => ocpi1_mappings,
                                       "ocpi-2" => ocpi2_mappings)
 const DEFAULT_NAMES_TO_DAQCHANS = Dict("ocpi-1" => map(reverse, ocpi1_mappings),
                                       "ocpi-2" => map(reverse, ocpi2_mappings))
-#Lists of positioner daq channels                                      
+                                      
+#Lists of analog output channels
+const ocpi1_aochans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-1"][x], ["axial piezo"; "analogout1"])
+const ocpi2_aochans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-2"][x], ["axial piezo"; "horizontal piezo"; "analogout3"; "analogout4"])
+const AO_CHANS= Dict("ocpi-1" => ocpi1_aochans,
+                      "ocpi-2" => ocpi2_aochans)
+#Lists of positioner daq channels (a subset of AO_CHANS)                                      
 const ocpi1_poschans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-1"][x], ["axial piezo"])
 const ocpi2_poschans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-2"][x], ["axial piezo"; "horizontal piezo"])
 const POS_CHANS= Dict("ocpi-1" => ocpi1_poschans,
@@ -87,6 +93,10 @@ function default_samplemapper(rig_name::String, daq_chan_name::String; sample_ra
     end
 end
 
+function generic_ao_samplemapper{TV<:HasVoltageUnits, TU}(v::AbstractInterval{TV}; rawtype=UInt16, sample_rate::HasInverseTimeUnits{Int, TU}=10000s^-1)
+    return SampleMapper(typemin(rawtype), typemax(rawtype), minimum(v), maximum(v), minimum(v), maximum(v), sample_rate)
+end
+
 function piezo_samplemapper{TL<:HasLengthUnits,TV<:HasVoltageUnits, TU}(p::AbstractInterval{TL}, v::AbstractInterval{TV}; rawtype=UInt16, sample_rate::HasInverseTimeUnits{Int, TU}=10000s^-1)
     return SampleMapper(typemin(rawtype), typemax(rawtype), minimum(v), maximum(v), minimum(p), maximum(p), sample_rate)
 end
@@ -98,6 +108,8 @@ end
 
 const default_piezo_ranges = Dict("ocpi-1"=>(0.0μm .. 400.0μm, 0.0V .. 10.0V),
                                   "ocpi-2"=>(0.0μm .. 800.0μm, 0.0V .. 10.0V))
+const generic_ao_range = Dict("ocpi-1"=>0.0V .. 10.0V,
+                                  "ocpi-2"=>0.0V .. 10.0V)
 
 #returns an array of empty ImagineCommands, one for each channel accessible to OCPI2 users
 function rigtemplate{U}(rig::String; sample_rate::HasInverseTimeUnits{Int,U} = 10000s^-1)
@@ -107,10 +119,14 @@ function rigtemplate{U}(rig::String; sample_rate::HasInverseTimeUnits{Int,U} = 1
     coms = ImagineCommand[]
     shared_dict = Dict()
     name_lookup = DEFAULT_DAQCHANS_TO_NAMES[rig]
-    #positioners
-    for c in POS_CHANS[rig]
+    #analog outputs
+    for c in AO_CHANS[rig]
         nm = name_lookup[c]
-        push!(coms, ImagineCommand(nm, c, rig, [], String[], shared_dict, Int[], piezo_samplemapper(default_piezo_ranges[rig]...; rawtype = UInt16, sample_rate = sample_rate)))
+        if ispos(c, rig)
+            push!(coms, ImagineCommand(nm, c, rig, [], String[], shared_dict, Int[], piezo_samplemapper(default_piezo_ranges[rig]...; rawtype = UInt16, sample_rate = sample_rate)))
+        else
+            push!(coms, ImagineCommand(nm, c, rig, [], String[], shared_dict, Int[], generic_ao_samplemapper(generic_ao_range[rig]; rawtype = UInt16, sample_rate = sample_rate)))
+        end
     end
     #cameras
     for c in CAM_CHANS[rig]
@@ -149,6 +165,6 @@ function max_framerate(rig::String, hsize::Int, vsize::Int)
     if !in(rig, RIGS)
         error("Unrecognized rig")
     end
-    return RIG_FRAMERATE_FUNCS[rig]((hsize,vsize))
+    return RIG_FRAMERATE_FUNCS[rig]((hsize,vsize)) * Unitful.s^-1
 end
 

@@ -93,7 +93,7 @@ function scale(input::ClosedInterval{Int}, frac::Float64)
     return ClosedInterval(ctr - halfw_new, ctr + halfw_new)
 end
 
-function gen_bidirectional_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverseTimeUnits}(pmin::TL, pmax::TL, z_spacing::TL, stack_time::TT, exp_time::TT, sample_rate::TTI, flash_frac::Real; z_pad::TL = 1.0*Unitful.μm)
+function gen_bidirectional_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverseTimeUnits}(pmin::TL, pmax::TL, z_spacing::TL, stack_time::TT, exp_time::TT, sample_rate::TTI, flash_frac::Real; z_pad::TL = 1.0*Unitful.μm, alternate_cameras = false)
     flash = true
     if flash_frac > 1
         warn("las_frac was set greater than 1, so defaulting to keeping laser on throughout the stack")
@@ -131,10 +131,18 @@ function gen_bidirectional_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasI
 
     camfwd = gen_pulses(nsamps_stack, exp_intervals_fwd)
     camback = gen_pulses(nsamps_stack, exp_intervals_back)
-
-    output = Dict("positioner" => vcat(posfwd, posback), "camera" => vcat(camfwd, camback), "laser" => vcat(lasfwd, lasback), "nframes" => length(exp_intervals_fwd)*2)
-
-    return output
+    if alternate_cameras
+        output = Dict("positioner" => vcat(posfwd, posback), 
+                    "camera_fwd" => vcat(camfwd, fill(false, length(camback))),
+                    "camera_back" => vcat(fill(false, length(camfwd)), camback),
+                    "laser_fwd" => vcat(lasfwd, fill(false, length(lasback))),
+                    "laser_back" => vcat(fill(false, length(lasfwd)), lasback),
+                    "nframes_per_cam" => length(exp_intervals_fwd))
+        return output
+    else
+        output = Dict("positioner" => vcat(posfwd, posback), "camera" => vcat(camfwd, camback), "laser" => vcat(lasfwd, lasback), "nframes" => length(exp_intervals_fwd)*2)
+        return output
+    end
 end
 
 function gen_unidirectional_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverseTimeUnits}(pmin::TL, pmax::TL, z_spacing::TL, stack_time::TT, reset_time::TT, exp_time::TT, sample_rate::TTI, flash_frac::Real; z_pad::TL = 1.0*Unitful.μm)

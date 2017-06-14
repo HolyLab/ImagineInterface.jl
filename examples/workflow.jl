@@ -1,10 +1,13 @@
-using ImagineInterface, Unitful
+using ImagineInterface
+
+import Unitful: μm, s
 
 ############LOAD A RIG-SPECIFIC COMMAND TEMPLATE#################
-sample_rate = 50000*Unitful.s^-1 #analog output samples per second
+sample_rate = 50000s^-1 #analog output samples per second
 				#Currently all output channels must use the same sample rate
 				#Currently this also sets the analog input rate in Imagine
 				#High-framerate recordings should use a high sample rate.
+@show ImagineInterface.RIGS #show supported rigs                                
 rig = "ocpi-2"
 ocpi2 = rigtemplate(rig; sample_rate = sample_rate)
 @show ocpi2 #This is a vector where each element is an empty ImagineCommand
@@ -39,7 +42,7 @@ sweep_up2 = decompress(pos, "sweep_up") #now sweep_up == sweep_up2
 #Or you can use sample indices
 some_samps = decompress(pos, 50, 100)
 #OR you can use time
-more_samps = decompress(pos, 0.1*Unitful.s, 0.13*Unitful.s)
+more_samps = decompress(pos, 0.1s, 0.13s)
 
 #You can also remove the last set of samples appended to the list like this:
 pop!(pos)
@@ -48,12 +51,12 @@ pop!(pos)
 #Currently you can generate an entire stack of positioner, camera, and laser pulse signals in the fashion shown below
 
 ############STACK PARAMETERS#################
-pmin = 0.0*Unitful.μm #Piezo start position in microns
-pmax = 200.0*Unitful.μm #Piezo stop position in microns
-stack_img_time = 1.0*Unitful.s #Time to complete the imaging sweep with the piezo (remember we also need to reset it to its starting position)
-reset_time = 0.5*Unitful.s #Time to reset piezo to starting position.  This time plus "stack_img_time" determines how long it takes to complete an entire stack and be ready to start a new stack
-z_spacing = 3.1*Unitful.μm #The space between slices in the z-stack.
-z_pad = 5.0*Unitful.μm #Set this greater than 0 if you want to ignore the edges of the positioner sweep (only take slices in a central region)
+pmin = 0.0*μm #Piezo start position in microns
+pmax = 200.0*μm #Piezo stop position in microns
+stack_img_time = 1.0s #Time to complete the imaging sweep with the piezo (remember we also need to reset it to its starting position)
+reset_time = 0.5s #Time to reset piezo to starting position.  This time plus "stack_img_time" determines how long it takes to complete an entire stack and be ready to start a new stack
+z_spacing = 3.1μm #The space between slices in the z-stack.
+z_pad = 5.0μm #Set this greater than 0 if you want to ignore the edges of the positioner sweep (only take slices in a central region)
 			#This is helpful for high-speed acquisitions where the piezo positioner may oscillate at the edges of sweeps
 #Now we need to set the exposure time.  With constraints imposed by the above pmin, pmax, stack_img_time, and z_spacing parameters there is actually a maximum exposure time.
 #If you exceed this time then you will get en error.  The helper function below will tell you what is the maximum time possible with these parameters
@@ -71,7 +74,7 @@ h = 1000 #doesn't matter with current cameras
 v = 1000
 @show mx_f = max_framerate(rig, h,v)
 mn_exp = 1/mx_f #This is the minimum possible exposure time
-exp_time = 0.011*Unitful.s  #Exposure time of the camera. Make sure this is greater than mn_exp and less than mx_exp above
+exp_time = 0.011s  #Exposure time of the camera. Make sure this is greater than mn_exp and less than mx_exp above
 flash_frac = 0.1 #fraction of time to keep laser on during exposure.  If you set this greater than 1 then the laser will stay on constantly during the imaging sweep
 
 

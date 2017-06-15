@@ -18,34 +18,34 @@ const ocpi2_mappings = Dict("AO0"=>"axial piezo",
                       "P0.1"=>"stimulus2",
                       "P0.2"=>"stimulus3",
                       "P0.3"=>"stimulus4",
-                      "P0.4"=>"405nm laser",
+                      "P0.4"=>"all lasers",
                       "P0.5"=>"camera1",
                       "P0.6"=>"camera2",
                       "P0.7"=>"stimulus5",
-                      "P0.8"=>"stimulus6",
+                      "P0.8"=>"405nm laser",
                       "P0.9"=>"445nm laser",
                       "P0.10"=>"488nm laser",
                       "P0.11"=>"514nm laser",
                       "P0.12"=>"561nm laser",
-                      "P0.13"=>"stimulus7",
-                      "P0.14"=>"stimulus8",
-                      "P0.15"=>"stimulus9",
-                      "P0.16"=>"stimulus10",
-                      "P0.17"=>"stimulus11",
-                      "P0.18"=>"stimulus12",
-                      "P0.19"=>"stimulus13",
-                      "P0.20"=>"stimulus14",
-                      "P0.21"=>"stimulus15",
-                      "P0.22"=>"stimulus16",
-                      "P0.23"=>"stimulus17",
-                      "P0.24"=>"stimulus18",
-                      "P0.25"=>"stimulus19",
-                      "P0.26"=>"stimulus20",
-                      "P0.27"=>"stimulus21",
-                      "P0.28"=>"stimulus22",
-                      "P0.29"=>"stimulus23",
-                      "P0.30"=>"stimulus24",
-                      "P0.31"=>"stimulus25")
+                      "P0.13"=>"stimulus6",
+                      "P0.14"=>"stimulus7",
+                      "P0.15"=>"stimulus8",
+                      "P0.16"=>"stimulus9",
+                      "P0.17"=>"stimulus10",
+                      "P0.18"=>"stimulus11",
+                      "P0.19"=>"stimulus12",
+                      "P0.20"=>"stimulus13",
+                      "P0.21"=>"stimulus14",
+                      "P0.22"=>"stimulus15",
+                      "P0.23"=>"stimulus16",
+                      "P0.24"=>"camera1 frame monitor",
+                      "P0.25"=>"camera2 frame monitor",
+                      "P0.26"=>"diginput1",
+                      "P0.27"=>"diginput2",
+                      "P0.28"=>"diginput3",
+                      "P0.29"=>"diginput4",
+                      "P0.30"=>"diginput5",
+                      "P0.31"=>"diginput6",)
 
 const DEFAULT_DAQCHANS_TO_NAMES = Dict("ocpi-1" => ocpi1_mappings,
                                       "ocpi-2" => ocpi2_mappings)
@@ -69,12 +69,12 @@ const CAM_CHANS= Dict("ocpi-1" => ocpi1_camchans,
                       "ocpi-2" => ocpi2_camchans)
 #Lists of laser daq channels                                      
 const ocpi1_laschans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-1"][x], ["488nm laser shutter"])
-const ocpi2_laschans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-2"][x], ["405nm laser"; "445nm laser"; "488nm laser"; "514nm laser"; "561nm laser"])
+const ocpi2_laschans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-2"][x], ["405nm laser"; "445nm laser"; "488nm laser"; "514nm laser"; "561nm laser"; "all lasers"])
 const LAS_CHANS= Dict("ocpi-1" => ocpi1_laschans,
                       "ocpi-2" => ocpi2_laschans)
 #Lists of (digital) stimulus daq channels                                      
 const ocpi1_stimchans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-1"][x], ["stimulus$x" for x = 1:6])
-const ocpi2_stimchans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-2"][x], ["stimulus$x" for x = 1:25])
+const ocpi2_stimchans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-2"][x], ["stimulus$x" for x = 1:16])
 const STIM_CHANS= Dict("ocpi-1" => ocpi1_stimchans,
                       "ocpi-2" => ocpi2_stimchans)
 

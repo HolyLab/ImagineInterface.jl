@@ -94,6 +94,9 @@ function scale(input::ClosedInterval{Int}, frac::Float64)
 end
 
 function gen_bidirectional_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverseTimeUnits}(pmin::TL, pmax::TL, z_spacing::TL, stack_time::TT, exp_time::TT, sample_rate::TTI, flash_frac::Real; z_pad::TL = 1.0*Unitful.μm, alternate_cameras = false)
+    if pmin == pmax
+        error("Use the gen_2d_timeseries function instead of setting pmin and pmax to the same value")
+    end
     flash = true
     if flash_frac > 1
         warn("las_frac was set greater than 1, so defaulting to keeping laser on throughout the stack")
@@ -146,6 +149,9 @@ function gen_bidirectional_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasI
 end
 
 function gen_unidirectional_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverseTimeUnits}(pmin::TL, pmax::TL, z_spacing::TL, stack_time::TT, reset_time::TT, exp_time::TT, sample_rate::TTI, flash_frac::Real; z_pad::TL = 1.0*Unitful.μm)
+    if pmin == pmax
+        error("Use the gen_2d_timeseries function instead of setting pmin and pmax to the same value")
+    end
     flash = true
     if flash_frac > 1
         warn("las_frac was set greater than 1, so defaulting to keeping laser on throughout the stack")
@@ -182,3 +188,24 @@ function gen_unidirectional_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:Has
 
     return output
 end
+
+function gen_2d_timeseries{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverseTimeUnits}(position::TL, nframes::Int, exp_time::TT, inter_exp_time::TT, sample_rate::TTI, flash_frac::Real)
+    cycle_time = exp_time + inter_exp_time
+    exp_samps = round(Int, exp_time * sample_rate)
+    cycle_samps = round(Int, cycle_time * sample_rate)
+    inter_exp_samps = round(Int, inter_exp_time * sample_rate)
+    nsamps = round(Int, nframes * cycle_time * sample_rate)
+    pos = fill(position, nsamps)
+    exp_intervals = Array{ClosedInterval{Int}}(nframes)
+    curstart = div(inter_exp_samps,2) #offset by half the interframe time
+    for i = 1:nframes
+        exp_intervals[i] = ClosedInterval(curstart, curstart+exp_samps-1)
+        curstart += cycle_samps
+    end
+    las_intervals = map(x->scale(x, flash_frac), exp_intervals)
+    cam = gen_pulses(nsamps, exp_intervals)
+    las = gen_pulses(nsamps, las_intervals)
+    output = Dict("positioner" => pos, "camera" => cam, "laser" => las)
+    return output
+end
+ 

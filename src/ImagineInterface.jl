@@ -82,6 +82,7 @@ export gen_sweep,
         gen_pulses,
         scale,
         gen_bidirectional_stack,
-        gen_unidirectional_stack
+        gen_unidirectional_stack,
+        gen_2d_timeseries
 
 end #module

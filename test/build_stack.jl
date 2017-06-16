@@ -67,3 +67,12 @@ d2 = gen_unidirectional_stack(pmin, pmax, z_spacing, stack_time, stack_time, exp
 @test length(find(x->x==1, diff(d2["laser"]))) == length(exp_intervals_fwd) #count pulses
 @test d2["nframes"] == length(exp_intervals_fwd)
 
+#no piezo motion
+pset = 0.0 * Unitful.μm
+inter_exp_time = 0.0001 * Unitful.s #The time between exposure pulses
+d3 = gen_2d_timeseries(pset, 10, exp_time, inter_exp_time, sample_rate, flash_frac)
+@test all(d3["positioner"] .== pset)
+@test length(find(x->x==1, diff(d3["camera"]))) == 10
+@test length(find(x->x==1, diff(d3["laser"]))) == 10
+@test_approx_eq((exp_time + inter_exp_time) * 10 * sample_rate, length(d3["camera"]))
+

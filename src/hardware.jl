@@ -152,6 +152,7 @@ const RIG_CHIP_SIZES = Dict("ocpi-1" => PCO_EDGE_5_5_CHIP_SIZE, "ocpi-2" => PCO_
 const PCO_EDGE_5_5_FRAMERATE_FUNC = x::Tuple{Int,Int} -> 100 * 2^(log(2, 2048/x[2]))
 const PCO_EDGE_4_2_FRAMERATE_FUNC = x::Tuple{Int,Int} -> 100 * 2^(log(2, 2048/x[2]))
 const RIG_FRAMERATE_FUNCS = Dict("ocpi-1" => PCO_EDGE_5_5_FRAMERATE_FUNC, "ocpi-2" => PCO_EDGE_4_2_FRAMERATE_FUNC)
+const EXPOSURE_TRIGGER_DELAY = 0.0 * Unitful.ns #TODO: Get this with PCO_GetImageTiming 
 
 #For querying camera-related info
 function chip_size(rig::String)

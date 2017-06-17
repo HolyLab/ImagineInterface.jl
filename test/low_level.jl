@@ -55,7 +55,7 @@ sampsa = decompress(pos, 1, nsamps; sampmap=:volts)
 
 #raw, analog
 sampsa = decompress(pos, 1, nsamps; sampmap=:raw)
-@test eltype(sampsa) == rawtype(pos) #UInt16 by default
+@test eltype(sampsa) == rawtype(pos) #Int16 by default
 
 #world-mapped, digital
 sampsd = decompress(las1, 1, nsamps; sampmap=:world)
@@ -106,21 +106,30 @@ ocpi2 = rigtemplate("ocpi-2"; sample_rate = 20000*Unitful.s^-1)
 
 #append!
 pos = getpositioners(ocpi2)[1]
-rawdat = UInt16[0:typemax(UInt16)...]
+rawdat = Int16[0:typemax(Int16)...]
 append!(pos, "ramp_up", rawdat)
 dat = decompress(pos, "ramp_up")
 @test dat[1] == mapper(pos).worldmin
 @test dat[end] == mapper(pos).worldmax
 append!(pos, "ramp_up") #append existing
-@test length(pos) == 2*typemax(UInt16)+2
+@test length(pos) == 2*typemax(Int16)+2
+
+#test bounds checking
+rawdat = Int16[-5:1:5...] #negative samples for the positioner should be invalid
+@test_throws(Exception, append!(pos, "bad", rawdat))
+rawdat = Int16[-5:1:5...] * Unitful.V
+@test_throws(Exception, append!(pos, "bad", rawdat))
+rawdat = Int16[-5:1:5...] * Unitful.μm
+@test_throws(Exception, append!(pos, "bad", rawdat))
+
 
 #replace!
-rawdat2 = UInt16[typemax(UInt16):-1:0...]
+rawdat2 = Int16[typemax(Int16):-1:0...]
 replace!(pos, "ramp_up", rawdat2)
 dat = decompress(pos, "ramp_up")
 @test dat[end] == mapper(pos).worldmin
 @test dat[1] == mapper(pos).worldmax
-rawdat3 = UInt16[0;0;typemax(UInt16)] #change length
+rawdat3 = Int16[0;0;typemax(Int16)] #change length
 replace!(pos, "ramp_up", rawdat3)
 dat = decompress(pos, "ramp_up")
 @test dat[1] == mapper(pos).worldmin

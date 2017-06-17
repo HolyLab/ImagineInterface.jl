@@ -88,6 +88,8 @@ function default_samplemapper(rig_name::String, daq_chan_name::String; sample_ra
         return ttl_samplemapper(; sample_rate = sample_rate)
     elseif ispos(daq_chan_name, rig_name)
         return piezo_samplemapper(default_piezo_ranges[rig_name]...; rawtype=UInt16, sample_rate = sample_rate)
+    elseif isanalog(daq_chan_name, rig_name)
+        return generic_ao_samplemapper(-10.0V..10.0V; rawtype = Int16, sample_rate = sample_rate)
     else
         error("Unrecognized channel name")
     end

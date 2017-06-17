@@ -276,7 +276,7 @@ function compress{T}(input::AbstractVector{T})
 end
 compress(input::RLEVector) = input
 
-compress{Traw, TW}(seq::AbstractVector{Traw}, mapper::SampleMapper{Traw, TW}) = compress!(RepeatedValue{Traw}[], seq)
+compress{Traw, TW}(seq::AbstractVector{Traw}, mapper::SampleMapper{Traw, TW}) = compress!(RepeatedValue{Traw}[], mappedarray(bounds_check(mapper), seq))
 compress{Traw, TW, TV<:HasVoltageUnits}(seq::AbstractVector{TV}, mapper::SampleMapper{Traw, TW}) = compress!(RepeatedValue{Traw}[], mappedarray(volts2raw(mapper), seq))
 compress{Traw, TW}(seq::AbstractVector{TW}, mapper::SampleMapper{Traw, TW}) = compress!(RepeatedValue{Traw}[], mappedarray(world2raw(mapper), seq))
 

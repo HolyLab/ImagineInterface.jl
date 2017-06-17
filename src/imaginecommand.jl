@@ -276,9 +276,13 @@ function compress{T}(input::AbstractVector{T})
 end
 compress(input::RLEVector) = input
 
-compress{Traw, TW}(seq::AbstractVector{Traw}, mapper::SampleMapper{Traw, TW}) = compress!(RepeatedValue{Traw}[], seq)
+compress{Traw, TW}(seq::AbstractVector{Traw}, mapper::SampleMapper{Traw, TW}) = compress!(RepeatedValue{Traw}[], mappedarray(bounds_check(mapper), seq))
 compress{Traw, TW, TV<:HasVoltageUnits}(seq::AbstractVector{TV}, mapper::SampleMapper{Traw, TW}) = compress!(RepeatedValue{Traw}[], mappedarray(volts2raw(mapper), seq))
 compress{Traw, TW}(seq::AbstractVector{TW}, mapper::SampleMapper{Traw, TW}) = compress!(RepeatedValue{Traw}[], mappedarray(world2raw(mapper), seq))
+
+#attempt conversion when Quantity types don't exactly match (Float32 vs Float64 precision, for example)
+compress{Traw, TW, T}(seq::AbstractVector{T}, mapper::SampleMapper{Traw, TW}) = compress(map(x->convert(TW, x), seq), mapper)
+
 
 function append!(com::ImagineCommand, seqname::String)
     seqdict = sequence_lookup(com)

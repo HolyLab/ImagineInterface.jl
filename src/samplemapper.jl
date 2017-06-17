@@ -13,9 +13,22 @@ end
 raw2volts{Traw,TW}(mapper::SampleMapper{Traw,TW}) = x::Traw -> mapper.voltmin + ((x-mapper.rawmin)/(mapper.rawmax-mapper.rawmin))*(mapper.voltmax-mapper.voltmin)
 volts2world{Traw,TW}(mapper::SampleMapper{Traw,TW}) = x::HasVoltageUnits -> convert(TW, mapper.worldmin + ((x-mapper.voltmin)/(mapper.voltmax-mapper.voltmin))*(mapper.worldmax-mapper.worldmin))
 world2volts{Traw,TW}(mapper::SampleMapper{Traw,TW}) = x::TW -> mapper.voltmin + ((x-mapper.worldmin)/(mapper.worldmax-mapper.worldmin))*(mapper.voltmax-mapper.voltmin)
-volts2raw{Traw,TW}(mapper::SampleMapper{Traw,TW}) = x::HasVoltageUnits -> round(rawtype(mapper), mapper.rawmin + ((x-mapper.voltmin)/(mapper.voltmax-mapper.voltmin))*(mapper.rawmax-mapper.rawmin))
-world2raw{Traw,TW}(mapper::SampleMapper{Traw,TW}) = x::TW -> volts2raw(mapper)(world2volts(mapper)(x))
+
+function volts2raw{Traw,TW}(mapper::SampleMapper{Traw,TW})
+    bc = bounds_check(mapper)
+    return x::HasVoltageUnits -> bc(round(rawtype(mapper), mapper.rawmin + ((x-mapper.voltmin)/(mapper.voltmax-mapper.voltmin))*(mapper.rawmax-mapper.rawmin)))
+end
+
+function world2raw{Traw,TW}(mapper::SampleMapper{Traw,TW})
+    bc = bounds_check(mapper)
+    w2v = world2volts(mapper)
+    v2r = volts2raw(mapper)
+    return x::TW -> bc(v2r(w2v(x)))
+end
+
 raw2world{Traw,TW}(mapper::SampleMapper{Traw,TW}) = x::Traw -> volts2world(mapper)(raw2volts(mapper)(x))
+
+bounds_check{Traw,TW}(mapper::SampleMapper{Traw, TW}) = x::Traw -> (x >= mapper.rawmin && x <= mapper.rawmax) ? x : error("Raw value $x is outside of the valid range")
 
 rawtype{Traw,TW}(sm::SampleMapper{Traw, TW}) = Traw
 worldtype{Traw,TW}(sm::SampleMapper{Traw, TW}) = TW

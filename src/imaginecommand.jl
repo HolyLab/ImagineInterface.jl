@@ -56,6 +56,11 @@ function show(io::IO, com::ImagineCommand)
     else
         print(io, "Analog ")
     end
+    if isoutput(com)
+        print(io, "Output ")
+    else
+        print(io, "Input ")
+    end
     print(io, "ImagineCommand")
     if isdigital(com)
         print(io, "\n")
@@ -87,6 +92,14 @@ function ==(com1::ImagineCommand, com2::ImagineCommand)
 end
 
 name(com::ImagineCommand) = com.chan_name
+function rename!(com::ImagineCommand, newname::String)
+    if isfree(com)
+        com.chan_name = newname
+    else
+        error("Cannot rename this command because it's essential to the microscope (camera, positioner, laser, etc).  To see which commands in a list may be renamed, run getfree(coms)")
+    end
+    return com
+end
 daq_channel(com::ImagineCommand) = com.daq_chan_name
 rig_name(com::ImagineCommand) = com.rig_name
 rawtype(com::ImagineCommand) = rawtype(mapper(com))

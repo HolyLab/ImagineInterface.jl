@@ -14,19 +14,25 @@ using Unitful: μm, s, V
 @compat const HasInverseTimeUnits{T,U} = Quantity{T, typeof(inv(0.0s)).parameters[2], U}
 @compat const HasLengthUnits{T,U} = Quantity{T, typeof(0.0μm).parameters[2], U}
 
+include("metadata_constants.jl")
+include("hardware_constants.jl")
 include("samplemapper.jl")
 include("imaginecommand.jl")
-include("constants.jl")
-include("hardware.jl")
+include("hardware_templates.jl")
 include("convenience.jl")
 include("parse.jl")
 include("sequence_analysis.jl")
 include("write.jl")
 include("stack.jl")
 
+#hardware_constants.jl
+export chip_size,
+        max_framerate
+
 #imaginecommand.jl
 export ImagineCommand,
         name,
+        rename!,
         daq_channel,
         rig_name,
 	rawtype,
@@ -45,28 +51,31 @@ export ImagineCommand,
         replace!,
         replicate!
 
-#constants.jl
+#hardware_templates.jl
 export rigtemplate
-
-#hardware.jl
-export chip_size,
-        max_framerate
 
 #convenience.jl
 export getname,
         getdigital,
         getanalog,
+        getinputs,
+        getoutpus,
+        getfree,
+        getfixed,
         getpositioners,
         getcameras,
         getlasers,
         getstimuli,
         finddigital,
         findanalog,
+        findinputs,
+        findoutputs,
+        findfree,
+        findfixed,
         findpositioners,
         findcameras,
         findlasers,
         findstimuli
-
 
 #parse.jl
 export parse_command,

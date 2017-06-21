@@ -93,7 +93,7 @@ ocpi1 = rigtemplate("ocpi-1"; sample_rate = 20000*Unitful.s^-1)
 @test length(getcameras(ocpi1)) == 1
 @test length(getlasers(ocpi1)) == 1
 @test length(getpositioners(ocpi1)) == 1
-@test length(getstimuli(ocpi1)) == 6
+@test length(getstimuli(ocpi1)) == 5
 
 ocpi2 = rigtemplate("ocpi-2"; sample_rate = 20000*Unitful.s^-1)
 @test length(getcameras(ocpi2)) == 2

@@ -1,12 +1,12 @@
+__precompile__()
+
 module ImagineInterface
 
 using JSON, Unitful
 using MappedArrays, AxisArrays, IntervalSets
-using Plots, UnitfulPlots
 using Compat
 
 import Base: convert, show, length, size, isempty, ==, append!, pop!, empty! #, scale
-import Plots: plot
 
 using Unitful: μm, s, V
 @compat const HasVoltageUnits{T,U} = Quantity{T, typeof(0.0V).parameters[2], U}
@@ -23,7 +23,6 @@ include("parse.jl")
 include("sequence_analysis.jl")
 include("write.jl")
 include("stack.jl")
-include("plot.jl")
 
 #imaginecommand.jl
 export ImagineCommand,
@@ -60,7 +59,14 @@ export getname,
         getpositioners,
         getcameras,
         getlasers,
-        getstimuli
+        getstimuli,
+        finddigital,
+        findanalog,
+        findpositioners,
+        findcameras,
+        findlasers,
+        findstimuli
+
 
 #parse.jl
 export parse_command,

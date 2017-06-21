@@ -3,6 +3,4 @@ AxisArrays
 IntervalSets
 Unitful
 MappedArrays
-PlotlyJS
-Plots
 Compat 0.18

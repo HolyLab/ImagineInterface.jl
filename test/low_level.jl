@@ -85,7 +85,10 @@ write_commands(outname, allcoms, nstacks, nframes, exp_time; isbidi = false)
 allcoms2 = parse_commands(outname)
 sp = sortperm(map(name,allcoms)) #sort alphabetically to compare
 sp2 = sortperm(map(name,allcoms2))
-@test allcoms[sp] == allcoms2[sp]
+#The example file doesn't have input entries, so they should have been added automatically when saving
+@test length(allcoms2) == length(allcoms) + 3
+@assert length(findinputs(allcoms2)) == 3
+@test allcoms[sp] == getoutputs(allcoms2[sp2])
 rm(outname)
 
 #build commands from template

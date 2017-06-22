@@ -104,8 +104,6 @@ daq_channel(com::ImagineCommand) = com.daq_chan_name
 rig_name(com::ImagineCommand) = com.rig_name
 rawtype(com::ImagineCommand) = rawtype(mapper(com))
 worldtype(com::ImagineCommand) = worldtype(mapper(com))
-isdigital(com::ImagineCommand) = typeof(mapper(com).worldmin) == Bool
-isanalog(com::ImagineCommand) = !isdigital(com)
 sequences(com::ImagineCommand) = com.sequences
 sequence_names(com::ImagineCommand) = com.sequence_names
 sequence_lookup(com::ImagineCommand) = com.sequence_lookup
@@ -132,7 +130,16 @@ function ImagineCommand(rig_name::String, chan_name::String, daq_chan_name::Stri
     calc_cumlength!(cumlen, seqlist)
     sampmapper = default_samplemapper(rig_name, daq_chan_name; sample_rate = sample_rate)
     return ImagineCommand(chan_name, daq_chan_name, rig_name, seqlist, seqnames, seqs_lookup, cumlen, sampmapper)
-#    return ImagineCommand(rig_name, chan_name, daq_chan_name, seqlist, seqnames, seqs_lookup, sample_rate)
+end
+
+function calc_cumlength!{T<:Real}(output::Vector{Int}, seqs::Vector{T})
+    if !isempty(seqs)
+        output[1] = length(seqs[1])
+        for i = 2:length(seqs)
+            output[i] = output[i-1] + length(seqs[i])
+        end
+    end
+    return output
 end
 
 function calc_cumlength!{RV<:RLEVec}(output::Vector{Int}, seqs::Vector{RV})
@@ -146,12 +153,6 @@ function calc_cumlength!{RV<:RLEVec}(output::Vector{Int}, seqs::Vector{RV})
 end
 
 recalculate_cumlength!(com) = calc_cumlength!(com.cumlength, sequences(com))
-
-#function ImagineCommand(rig_name::String, chan_name::String, daq_chan_name::String, seqs, seqnames::Vector{String}, seqs_lookup::Dict, sample_rate::HasInverseTimeUnits)
-#    cumlen = zeros(Int, length(seqs))
-#    calc_cumlength!(cumlen, seqs)
-#    return ImagineCommand(chan_name, daq_chan_name, rig_name, seqs, seqnames, seqs_lookup, cumlen, default_samplemapper(rig_name, chan_name; sample_rate = sample_rate))
-#end
 
 function decompress(com::ImagineCommand, tstart::HasTimeUnits, tstop::HasTimeUnits; sampmap=:world)
     tstart = uconvert(unit(inv(samprate(com))), tstart)

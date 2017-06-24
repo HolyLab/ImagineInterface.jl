@@ -5,17 +5,12 @@ end
 
 function parse_commands(d::Dict)
     output = ImagineCommand[]
-    #rig = d[METADATA_KEY]["rig"]
-    #TODO: remove this when rig gets added to the metadata
-#    if haskey(d[METADATA_KEY], "rig")
     rig = d[METADATA_KEY]["rig"]
-#    else
-#        rig = "ocpi2"
-#    end
     for typ_key in (ANALOG_KEY, DIGITAL_KEY)
         for k in keys(d[typ_key])
             v = d[typ_key][k]
-            push!(output, ImagineCommand(rig, k, v["daq channel"], convert(RLEVector, v["sequence"]), d[COMPONENT_KEY], Int(d[METADATA_KEY]["samples per second"])*Unitful.s^-1))
+            seq = haskey(v, "sequence") ? convert(RLEVector, v["sequence"]) : convert(RLEVector, [])
+            push!(output, ImagineCommand(rig, k, v["daq channel"], seq, d[COMPONENT_KEY], Int(d[METADATA_KEY]["samples per second"])*Unitful.s^-1))
         end
     end
     return output
@@ -27,18 +22,12 @@ function parse_command(filename::String, comname::String)
 end
 
 function parse_command(d::Dict, comname::String)
-    #rig = d[METADATA_KEY]["rig"]
-    #TODO: remove this when rig gets added to the metadata
-#    if haskey(d[METADATA_KEY], "rig")
     rig = d[METADATA_KEY]["rig"]
-#    else
-#        rig = "ocpi2"
-#    end
-
     for typ_key in (ANALOG_KEY, DIGITAL_KEY)
         ad = d[typ_key]
         if haskey(ad, comname)
-            return ImagineCommand(rig, comname, ad[comname]["daq channel"], convert(RLEVector, ad[comname]["sequence"]), d[COMPONENT_KEY], Int(d[METADATA_KEY]["samples per second"])*Unitful.s^-1)
+            seq = haskey(ad[comname], "sequence") ? convert(RLEVector, ad[comname]["sequence"]) : convert(RLEVector, [])
+            return ImagineCommand(rig, comname, ad[comname]["daq channel"], seq, d[COMPONENT_KEY], Int(d[METADATA_KEY]["samples per second"])*Unitful.s^-1)
         end
     end
     error("Command signal name not found")

@@ -1,6 +1,5 @@
 using ImagineInterface
 
-using Plots
 import Unitful: μm, s
 
 ############LOAD A RIG-SPECIFIC COMMAND TEMPLATE#################
@@ -103,7 +102,7 @@ cam1 = cams[1] #You could also append to the other camera
 append!(cam1, "uni_stack_cam1", d["camera"])
 
 
-using ImaginePlots #You will have to install this with Pkg.clone before it will work
+using Plots, ImaginePlots #You will have to install ImaginePlots with Pkg.clone before it will work
 
 #There is a special plot method that lets you visualize all commands.  Currently it groups commands in multiple plot windows base on hardware
 plot(ocpi2) #note that this currently won't display when you run the script via include("workflow.jl") Type or paste the command in the terminal to see the plot

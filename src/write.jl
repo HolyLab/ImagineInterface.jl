@@ -43,9 +43,9 @@ function check_samptypes(coms::Vector{ImagineCommand}, rig::AbstractString)
         error("All commands must use equal sample rates.  This can be set per-channel with `set_samprate!`")
     end
     #check that all have equal number of samples
-    nsamps = map(length, coms)
+    nsamps = map(length, getoutputs(coms))
     if !all(nsamps.==nsamps[1])
-        error("All commands must have an equal number of samples.  Check this with `length(com::ImagineCommand)`")
+        error("All output commands must have an equal number of samples.  Check this with `length(com::ImagineCommand)`")
     end
     return true
 end
@@ -72,16 +72,15 @@ end
 
 compress_seqnames(c::ImagineCommand) = compress(sequence_names(c))
 
-function build_outdict(coms, rig::String, nstacks, frames_per_stack, exp_time, isbidi)
-    seq_lookup = combine_lookups(coms)
-    out_dict = Dict()
-    ana_dict = Dict()
-    dig_dict = Dict()
+function initialize_outdict{TT<:HasTimeUnits, TTI<:HasInverseTimeUnits}(rig::String, seq_lookup::Dict, nstacks, frames_per_stack, exp_time::TT, samp_rate::TTI, nsamps, isbidi)
+    out_dict = Dict{String,Any}()
+    ana_dict = Dict{String,Any}()
+    dig_dict = Dict{String,Any}()
     out_dict[VERSION_KEY] = VERSION_STRING
     out_dict[ANALOG_KEY] = ana_dict
     out_dict[DIGITAL_KEY] = dig_dict
     out_dict[COMPONENT_KEY] = seq_lookup
-    sampr = ustrip(uconvert(Unitful.s^-1, samprate(coms[1])))
+    sampr = ustrip(uconvert(Unitful.s^-1, samp_rate)) #samprate(coms[1])))
 #    print("Counting frames and exposure samples...")
 #    frame_starts = map(pulse_starts, getcameras(coms)) #TODO: implement this function
 #    nfs = map(length, frame_starts)
@@ -97,13 +96,25 @@ function build_outdict(coms, rig::String, nstacks, frames_per_stack, exp_time, i
                                         "stacks" => nstacks,
                                         "bi-direction" => isbidi,
                                         "exposure time in seconds" => ustrip(uconvert(Unitful.s, exp_time)),
-                                        "sample num" => length(coms[1]),
+                                        "sample num" => nsamps,
                                         "rig" => rig)
+    return out_dict
+end
+
+function _write_commands!(out_dict, coms)
+    dig_dict = out_dict[DIGITAL_KEY]
+    ana_dict = out_dict[ANALOG_KEY]
     for c in coms
         if isdigital(c)
-            dig_dict[name(c)] = Dict("daq channel"=>daq_channel(c), "sequence"=>compress(sequence_names(c)))
+            dig_dict[name(c)] = Dict{String,Any}("daq channel"=>daq_channel(c))
+            if isoutput(c) #only write the sequence field for outputs
+                dig_dict[name(c)]["sequence"] = compress(sequence_names(c))
+            end
         else
-            ana_dict[name(c)] = Dict("daq channel"=>daq_channel(c), "sequence"=>compress(sequence_names(c)))
+            ana_dict[name(c)] = Dict{String,Any}("daq channel"=>daq_channel(c))
+            if isoutput(c) #only write the sequence field for outputs
+                ana_dict[name(c)]["sequence"] = compress(sequence_names(c))
+            end
         end
     end
     return out_dict
@@ -167,9 +178,21 @@ function check_valid_channels(coms::Vector{ImagineCommand}, rig::String)
     return true
 end
 
+function get_missing_monitors(coms_used)
+    output = similar(coms_used, 0)
+    for c in coms_used
+        if hasmonitor(c)
+            if !isempty(findname(coms_used, getmonitor_name(c)))
+                push!(output, getmonitor(c))
+            end
+        end
+    end
+    return output
+end
+
 function write_commands(fname::String, coms::Vector{ImagineCommand}, nstacks::Int, nframes::Int, exp_time::HasTimeUnits; isbidi::Bool=false)
     @assert splitext(fname)[2] == ".json"
-    isused = map(x->!isempty(x), coms)
+    isused = map(x-> !isoutput(x) || !isempty(x), coms)
     coms_used = coms[isused]
     check_rig_names(coms_used)
     rig = rig_name(coms_used[1])
@@ -178,8 +201,15 @@ function write_commands(fname::String, coms::Vector{ImagineCommand}, nstacks::In
     check_sufficiency(coms_used)
     check_samptypes(coms_used, rig)
     #check_speed_limits(coms_used, rig) #TODO: implement this
-    print("Writing commands for the following channels: $(map(name, coms_used)) \n")
-    out_dict = build_outdict(coms_used, rig, nstacks, nframes, exp_time, isbidi)
+    seq_lookup = combine_lookups(coms_used)
+    mons = get_missing_monitors(coms_used)
+    out_dict = initialize_outdict(rig, seq_lookup, nstacks, nframes, exp_time, samprate(coms[1]), length(coms[1]), isbidi)
+    if !isempty(mons)
+        print("Adding the following required monitors (inputs) to the command file: $(map(name, mons)) \n")
+    end
+    _write_commands!(out_dict, coms_used)
+    print("Writing these commands as requested: $(map(name, coms_used)) \n")
+    _write_commands!(out_dict, mons)
     f = open(fname, "w")
     JSON.print(f, out_dict)
     close(f)

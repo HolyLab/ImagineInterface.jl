@@ -162,6 +162,16 @@ const ocpi2_fixed_daqchans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-2"][x], ocpi
 const FIXED_NAMES = Dict("ocpi-1" => ocpi1_fixed_names, "ocpi-2" => ocpi2_fixed_names)
 const FIXED_DAQ_CHANS = Dict("ocpi-1" => ocpi1_fixed_daqchans, "ocpi-2" => ocpi2_fixed_daqchans)
 
+isfree(daq_chan::String, rig::String) = !in(daq_chan, FIXED_DAQ_CHANS[rig])
+isdigital(daq_chan::String, rig::String) = in(daq_chan, DI_CHANS[rig]) || in(daq_chan, DO_CHANS[rig])
+isoutput(daq_chan::String, rig::String) = in(daq_chan, AO_CHANS[rig]) || in(daq_chan, DO_CHANS[rig])
+ispos(daq_chan::String, rig::String) = in(daq_chan, POS_CONTROL_CHANS[rig])
+isposmonitor(daq_chan::String, rig::String) = in(daq_chan, POS_MONITOR_CHANS[rig])
+iscam(daq_chan::String, rig::String) = in(daq_chan, CAM_CONTROL_CHANS[rig])
+iscammonitor(daq_chan::String, rig::String) = in(daq_chan, CAM_MONITOR_CHANS[rig])
+islas(daq_chan::String, rig::String) = in(daq_chan, LAS_CONTROL_CHANS[rig])
+isstim(daq_chan::String, rig::String) = in(daq_chan, STIM_CHANS[rig])
+
 const PCO_EDGE_5_5_CHIP_SIZE = (2560, 2160)
 const PCO_EDGE_4_2_CHIP_SIZE = (2060, 2048) #We use the (older) CameraLink version (without the new sensor)
 const RIG_CHIP_SIZES = Dict("ocpi-1" => PCO_EDGE_5_5_CHIP_SIZE, "ocpi-2" => PCO_EDGE_4_2_CHIP_SIZE)

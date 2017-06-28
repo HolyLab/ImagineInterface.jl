@@ -101,6 +101,7 @@ function rename!(com::ImagineCommand, newname::String)
     return com
 end
 daq_channel(com::ImagineCommand) = com.daq_chan_name
+daq_channel_number(com::ImagineCommand) = daq_channel_number(com.daq_chan_name)
 rig_name(com::ImagineCommand) = com.rig_name
 rawtype(com::ImagineCommand) = rawtype(mapper(com))
 worldtype(com::ImagineCommand) = worldtype(mapper(com))

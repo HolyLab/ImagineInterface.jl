@@ -154,6 +154,8 @@ const ocpi2_stimchans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-2"][x], ["stimulu
 const STIM_CHANS= Dict("ocpi-1" => ocpi1_stimchans,
                       "ocpi-2" => ocpi2_stimchans)
 
+daq_channel_number(ch::String) = parse(Int, last(split("AO0", ['.', 'I', 'O'])))
+
 #These names aren't allowed to be changed by users when writing command files
 const ocpi1_fixed_names = ["axial piezo", "axial piezo monitor", "488nm laser shutter", "camera1", "camera1 frame monitor"]
 const ocpi1_fixed_daqchans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-1"][x], ocpi1_fixed_names)

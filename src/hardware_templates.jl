@@ -47,36 +47,41 @@ function rigtemplate{U}(rig::String; sample_rate::HasInverseTimeUnits{Int,U} = 1
     shared_dict = Dict()
     name_lookup = DEFAULT_DAQCHANS_TO_NAMES[rig]
     #analog outputs
+    ao_sampmapper = 0
     for c in AO_CHANS[rig]
         if ispos(c, rig)
-            push!(coms, ImagineCommand(name_lookup[c], c, rig, [], String[], shared_dict, Int[], piezo_samplemapper(default_piezo_ranges[rig]...; rawtype = Int16, sample_rate = sample_rate)))
+            ao_sampmapper = piezo_samplemapper(default_piezo_ranges[rig]...; rawtype = Int16, sample_rate = sample_rate)
         else
-            push!(coms, ImagineCommand(name_lookup[c], c, rig, [], String[], shared_dict, Int[], generic_ao_samplemapper(generic_ao_range[rig]; rawtype = Int16, sample_rate = sample_rate)))
+            ao_sampmapper = generic_ao_samplemapper(generic_ao_range[rig]; rawtype = Int16, sample_rate = sample_rate)
         end
+        ao_vectype = RLEVec{rawtype(ao_sampmapper)}
+        push!(coms, ImagineCommand{ao_vectype}(name_lookup[c], c, rig, [], String[], shared_dict, Int[], ao_sampmapper))
     end
-    #camera outputs
-    for c in CAM_CONTROL_CHANS[rig]
-        push!(coms, ImagineCommand(name_lookup[c], c, rig, [], String[], shared_dict, Int[], ttl_samplemapper(;sample_rate = sample_rate)))
+
+    #digital outputs (includes cameras, lasers, and stimulus channels)
+    do_sampmapper = ttl_samplemapper(;sample_rate = sample_rate)
+    do_vectype = RLEVec{rawtype(do_sampmapper)}
+    for c in DO_CHANS[rig]
+        push!(coms, ImagineCommand{do_vectype}(name_lookup[c], c, rig, [], String[], shared_dict, Int[], do_sampmapper))
     end
-    #laser outputs
-    for c in LAS_CONTROL_CHANS[rig]
-        push!(coms, ImagineCommand(name_lookup[c], c, rig, [], String[], shared_dict, Int[], ttl_samplemapper(;sample_rate = sample_rate)))
-    end
-    #stimuli
-    for c in STIM_CHANS[rig]
-        push!(coms, ImagineCommand(name_lookup[c], c, rig, [], String[], shared_dict, Int[], ttl_samplemapper(;sample_rate = sample_rate)))
-    end
+
     #analog inputs
+    ai_sampmapper = 0
     for c in AI_CHANS[rig]
         if ispos(c, rig)
-            push!(coms, ImagineCommand(name_lookup[c], c, rig, [], String[], shared_dict, Int[], piezo_samplemapper(default_piezo_ranges[rig]...; rawtype = Int16, sample_rate = sample_rate)))
+            ai_sampmapper = piezo_samplemapper(default_piezo_ranges[rig]...; rawtype = Int16, sample_rate = sample_rate)
         else
-            push!(coms, ImagineCommand(name_lookup[c], c, rig, [], String[], shared_dict, Int[], generic_ai_samplemapper(generic_ai_range[rig]; rawtype = Int16, sample_rate = sample_rate)))
+            ai_sampmapper = generic_ai_samplemapper(generic_ai_range[rig]; rawtype = Int16, sample_rate = sample_rate)
         end
+        ai_vectype = Vector{rawtype(ai_sampmapper)}
+        push!(coms, ImagineCommand{ai_vectype}(name_lookup[c], c, rig, [], String[], shared_dict, Int[], ai_sampmapper))
     end
+
     #digital inputs (including cameras)
+    di_sampmapper = do_sampmapper
+    di_vectype = Vector{rawtype(di_sampmapper)}
     for c in DI_CHANS[rig]
-        push!(coms, ImagineCommand(name_lookup[c], c, rig, [], String[], shared_dict, Int[], ttl_samplemapper(;sample_rate = sample_rate))) #TODO: handle bit-packing (.di file convention)
+        push!(coms, ImagineCommand{di_vectype}(name_lookup[c], c, rig, [], String[], shared_dict, Int[], di_sampmapper)) #TODO: handle bit-packing (.di file convention)
     end
 
     return coms

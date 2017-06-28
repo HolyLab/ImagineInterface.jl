@@ -39,11 +39,11 @@ function convert{T,S}(::Type{RLEVector{T}}, v::AbstractVector{S})
     out
 end
 
-type ImagineCommand
+type ImagineCommand{Vectype}
     chan_name::String
     daq_chan_name::String
     rig_name::String
-    sequences::Vector{RLEVec}
+    sequences::Vector{Vectype}
     sequence_names::Vector{String}
     sequence_lookup::Dict
     cumlength::Vector{Int}
@@ -119,7 +119,10 @@ set_samprate!(com::ImagineCommand, r::Int) = set_samprate!(mapper(com), r)
 
 #In the JSON arrays, waveforms and counts-of-waves are specified in alternating order: count,wave,count,wave...
 function ImagineCommand(rig_name::String, chan_name::String, daq_chan_name::String, seqs_compressed::RLEVec, seqs_lookup::Dict, sample_rate::HasInverseTimeUnits)
-    seqlist = RLEVec[]
+    sampmapper = default_samplemapper(rig_name, daq_chan_name; sample_rate = sample_rate)
+    rawtyp = rawtype(sampmapper)
+    vectype = isoutput(daq_chan_name, rig_name) ? RLEVec{rawtyp} : Vector{rawtyp}
+    seqlist = Vector{vectype}(0)
     seqnames = String[]
     for s in seqs_compressed
         for c = 1:s.n
@@ -129,11 +132,10 @@ function ImagineCommand(rig_name::String, chan_name::String, daq_chan_name::Stri
     end
     cumlen = zeros(Int, length(seqlist))
     calc_cumlength!(cumlen, seqlist)
-    sampmapper = default_samplemapper(rig_name, daq_chan_name; sample_rate = sample_rate)
-    return ImagineCommand(chan_name, daq_chan_name, rig_name, seqlist, seqnames, seqs_lookup, cumlen, sampmapper)
+    return ImagineCommand{vectype}(chan_name, daq_chan_name, rig_name, seqlist, seqnames, seqs_lookup, cumlen, sampmapper)
 end
 
-function calc_cumlength!{T<:Real}(output::Vector{Int}, seqs::Vector{T})
+function calc_cumlength!{T}(output::Vector{Int}, seqs::Vector{T})
     if !isempty(seqs)
         output[1] = length(seqs[1])
         for i = 2:length(seqs)

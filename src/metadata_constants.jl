@@ -9,4 +9,4 @@ const COMPONENT_KEY = "wave list"
 const METADATA_KEY = "metadata"
 const VERSION_KEY = "version"
 const VERSION_STRING = "v1.0"
-const RIGS = ["ocpi-1"; "ocpi-2"]
+const RIGS = ["ocpi-1"; "ocpi-2"; "ocpi-lsk"]

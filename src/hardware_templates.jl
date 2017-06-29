@@ -32,9 +32,11 @@ function ttl_samplemapper{U}(; sample_rate::HasInverseTimeUnits{Int, U}=10000s^-
 end
 
 const default_piezo_ranges = Dict("ocpi-1"=>(0.0μm .. 400.0μm, 0.0V .. 10.0V),
-                                  "ocpi-2"=>(0.0μm .. 800.0μm, 0.0V .. 10.0V))
-const generic_ao_range = Dict("ocpi-1"=>0.0V .. 10.0V,
-                                  "ocpi-2"=>0.0V .. 10.0V)
+                                  "ocpi-2"=>(0.0μm .. 800.0μm, 0.0V .. 10.0V),
+                                  "ocpi-lsk"=>(0.0μm .. 400.0μm, 0.0V .. 10.0V))
+const generic_ao_range = Dict("ocpi-1"=>-10.0V .. 10.0V,
+                                  "ocpi-2"=>-10.0V .. 10.0V,
+                                  "ocpi-lsk"=>-10.0V .. 10.0V)
 const generic_ai_range = generic_ao_range #TODO: make sure this is true.  (true if we are recording -10..10V on analog inputs)
 
 
@@ -68,7 +70,7 @@ function rigtemplate{U}(rig::String; sample_rate::HasInverseTimeUnits{Int,U} = 1
     #analog inputs
     ai_sampmapper = 0
     for c in AI_CHANS[rig]
-        if ispos(c, rig)
+        if isposmonitor(c, rig)
             ai_sampmapper = piezo_samplemapper(default_piezo_ranges[rig]...; rawtype = Int16, sample_rate = sample_rate)
         else
             ai_sampmapper = generic_ai_samplemapper(generic_ai_range[rig]; rawtype = Int16, sample_rate = sample_rate)

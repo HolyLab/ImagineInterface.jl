@@ -39,7 +39,7 @@ function convert{T,S}(::Type{RLEVector{T}}, v::AbstractVector{S})
     out
 end
 
-type ImagineCommand{Vectype}
+type ImagineCommand{Vectype<:AbstractVector}
     chan_name::String
     daq_chan_name::String
     rig_name::String
@@ -95,7 +95,7 @@ name(com::ImagineCommand) = com.chan_name
 function rename!(com::ImagineCommand, newname::String)
     if isfree(com)
         com.chan_name = newname
-    else
+    elseif com.chan_name != newname
         error("Cannot rename this command because it's essential to the microscope (camera, positioner, laser, etc).  To see which commands in a list may be renamed, run getfree(coms)")
     end
     return com
@@ -116,26 +116,10 @@ interval_world(com::ImagineCommand) = interval_world(mapper(com))
 cumlength(com::ImagineCommand) = com.cumlength
 samprate(com::ImagineCommand) = samprate(mapper(com))
 set_samprate!(com::ImagineCommand, r::Int) = set_samprate!(mapper(com), r)
+iscompressed{T<:RLEVector}(com::ImagineCommand{T}) = true
+iscompressed{T}(com::ImagineCommand{T}) = false
 
-#In the JSON arrays, waveforms and counts-of-waves are specified in alternating order: count,wave,count,wave...
-function ImagineCommand(rig_name::String, chan_name::String, daq_chan_name::String, seqs_compressed::RLEVec, seqs_lookup::Dict, sample_rate::HasInverseTimeUnits)
-    sampmapper = default_samplemapper(rig_name, daq_chan_name; sample_rate = sample_rate)
-    rawtyp = rawtype(sampmapper)
-    vectype = isoutput(daq_chan_name, rig_name) ? RLEVec{rawtyp} : Vector{rawtyp}
-    seqlist = Vector{vectype}(0)
-    seqnames = String[]
-    for s in seqs_compressed
-        for c = 1:s.n
-            push!(seqlist, seqs_lookup[s.value])
-            push!(seqnames, s.value)
-        end
-    end
-    cumlen = zeros(Int, length(seqlist))
-    calc_cumlength!(cumlen, seqlist)
-    return ImagineCommand{vectype}(chan_name, daq_chan_name, rig_name, seqlist, seqnames, seqs_lookup, cumlen, sampmapper)
-end
-
-function calc_cumlength!{T}(output::Vector{Int}, seqs::Vector{T})
+function calc_cumlength!{T<:AbstractVector}(output::Vector{Int}, seqs::Vector{T})
     if !isempty(seqs)
         output[1] = length(seqs[1])
         for i = 2:length(seqs)
@@ -144,7 +128,6 @@ function calc_cumlength!{T}(output::Vector{Int}, seqs::Vector{T})
     end
     return output
 end
-
 function calc_cumlength!{RV<:RLEVec}(output::Vector{Int}, seqs::Vector{RV})
     if !isempty(seqs)
         output[1] = sum(s.n for s in seqs[1])
@@ -157,6 +140,35 @@ end
 
 recalculate_cumlength!(com) = calc_cumlength!(com.cumlength, sequences(com))
 
+function compress!{T}(output::RLEVector{T}, input::AbstractVector{T})
+    if isempty(input)
+        return output
+    end
+    count = 1
+    curval = input[1]
+    for i = 2:length(input)
+        if(curval != input[i])
+            push!(output, RepeatedValue(count, curval))
+            count = 1
+            curval = input[i]
+        else
+            count+=1
+        end
+    end
+    push!(output, RepeatedValue(count, input[end]))
+    return output
+end
+function compress{T}(input::AbstractVector{T})
+    output = Vector{RepeatedValue{T}}(0)
+    return compress!(output, input)
+end
+compress(input::RLEVector) = input
+compress{Traw, TW}(seq::AbstractVector{Traw}, mapper::SampleMapper{Traw, TW}) = compress!(RepeatedValue{Traw}[], mappedarray(bounds_check(mapper), seq))
+compress{Traw, TW, TV<:HasVoltageUnits}(seq::AbstractVector{TV}, mapper::SampleMapper{Traw, TW}) = compress!(RepeatedValue{Traw}[], mappedarray(volts2raw(mapper), seq))
+compress{Traw, TW}(seq::AbstractVector{TW}, mapper::SampleMapper{Traw, TW}) = compress!(RepeatedValue{Traw}[], mappedarray(world2raw(mapper), seq))
+#attempt conversion when Quantity types don't exactly match (Float32 vs Float64 precision, for example)
+compress{Traw, TW, T}(seq::AbstractVector{T}, mapper::SampleMapper{Traw, TW}) = compress(map(x->convert(TW, x), seq), mapper)
+
 function decompress(com::ImagineCommand, tstart::HasTimeUnits, tstop::HasTimeUnits; sampmap=:world)
     tstart = uconvert(unit(inv(samprate(com))), tstart)
     tstop = uconvert(unit(inv(samprate(com))), tstop)
@@ -164,7 +176,6 @@ function decompress(com::ImagineCommand, tstart::HasTimeUnits, tstop::HasTimeUni
     istop = floor(Int64, tstop * samprate(com))+1
     return decompress(com, istart, istop; sampmap=sampmap)
 end
-
 function decompress(com::ImagineCommand, istart::Int, istop::Int; sampmap=:world)
     if !in(sampmap, (:world, :volts, :raw))
         error("Unrecognized sample mapping")
@@ -188,10 +199,27 @@ function decompress(com::ImagineCommand, istart::Int, istop::Int; sampmap=:world
     ax = Axis{:time}(linspace(tstart, tstop, nsamps))
     return AxisArray(datm, ax)
 end
-
 decompress(com::ImagineCommand; sampmap=:world) = decompress(com, 1, length(com); sampmap=sampmap)
+function decompress(com::ImagineCommand, sequence_name::String; sampmap = :world)
+    #find start and stop indices of the first occurence of that sequence
+    seqi = findfirst(x->x==sequence_name, sequence_names(com))
+    if seqi == 0
+        error("Sequence name not found")
+    end
+    if seqi == 1
+        starti = 1
+    else
+        starti = cumlength(com)[seqi-1]+1
+    end
+    stopi = cumlength(com)[seqi]
+    return decompress(com, starti, stopi; sampmap=sampmap)
+end
 
-function decompress_raw(com::ImagineCommand, istart::Int, istop::Int)
+#This version gets called for input signals
+decompress_raw{T<:AbstractVector}(com::ImagineCommand{T}, istart::Int, istop::Int) = sequences(com)[1][istart:istop]
+
+#This version gets called for output signals
+function decompress_raw{T<:RLEVec}(com::ImagineCommand{T}, istart::Int, istop::Int)
     if istart < 1 || istop > length(com) #bounds check
         error("The requested time interval is out of bounds")
     end
@@ -253,55 +281,7 @@ function decompress_raw(com::ImagineCommand, istart::Int, istop::Int)
     return output
 end
 
-function decompress(com::ImagineCommand, sequence_name::String; sampmap = :world)
-    #find start and stop indices of the first occurence of that sequence
-    seqi = findfirst(x->x==sequence_name, sequence_names(com))
-    if seqi == 0
-        error("Sequence name not found")
-    end
-    if seqi == 1
-        starti = 1
-    else
-        starti = cumlength(com)[seqi-1]+1
-    end
-    stopi = cumlength(com)[seqi]
-    return decompress(com, starti, stopi; sampmap=sampmap)
-end
-
-function compress!{T}(output::RLEVector{T}, input::AbstractVector{T})
-    if isempty(input)
-        return output
-    end
-    count = 1
-    curval = input[1]
-    for i = 2:length(input)
-        if(curval != input[i])
-            push!(output, RepeatedValue(count, curval))
-            count = 1
-            curval = input[i]
-        else
-            count+=1
-        end
-    end
-    push!(output, RepeatedValue(count, input[end]))
-    return output
-end
-
-function compress{T}(input::AbstractVector{T})
-    output = Vector{RepeatedValue{T}}(0)
-    return compress!(output, input)
-end
-compress(input::RLEVector) = input
-
-compress{Traw, TW}(seq::AbstractVector{Traw}, mapper::SampleMapper{Traw, TW}) = compress!(RepeatedValue{Traw}[], mappedarray(bounds_check(mapper), seq))
-compress{Traw, TW, TV<:HasVoltageUnits}(seq::AbstractVector{TV}, mapper::SampleMapper{Traw, TW}) = compress!(RepeatedValue{Traw}[], mappedarray(volts2raw(mapper), seq))
-compress{Traw, TW}(seq::AbstractVector{TW}, mapper::SampleMapper{Traw, TW}) = compress!(RepeatedValue{Traw}[], mappedarray(world2raw(mapper), seq))
-
-#attempt conversion when Quantity types don't exactly match (Float32 vs Float64 precision, for example)
-compress{Traw, TW, T}(seq::AbstractVector{T}, mapper::SampleMapper{Traw, TW}) = compress(map(x->convert(TW, x), seq), mapper)
-
-
-function append!(com::ImagineCommand, seqname::String)
+function append!{T<:RLEVector}(com::ImagineCommand{T}, seqname::String)
     seqdict = sequence_lookup(com)
     if !haskey(seqdict, seqname)
         error("The requested sequence name was not found.  To add a new sequence by this name, use `append!(com, seqname, sequence)`")
@@ -324,7 +304,7 @@ function append!(com::ImagineCommand, seqname::String)
     return com
 end
 
-function append!{T}(com::ImagineCommand, seqname::String, sequence::AbstractVector{T})
+function append!{T<:RLEVector, TS}(com::ImagineCommand{T}, seqname::String, sequence::AbstractVector{TS})
     seqdict = sequence_lookup(com)
     if haskey(seqdict, seqname)
         error("Sequence name exists.  If you mean to add append another copy of the existing sequence, call `append!(com, seqname)` instead")
@@ -341,7 +321,7 @@ end
 
 #Repeat the entire sequence currently described by com nreps times
 #(Equivalent to calling append!(com, seqname) nreps times when seqname is the only sequence in com)
-function replicate!(com::ImagineCommand, nreps::Int)
+function replicate!{T<:RLEVector}(com::ImagineCommand{T}, nreps::Int)
     names_to_append = deepcopy(sequence_names(com))
     for n = 1:nreps
         for nm in names_to_append
@@ -351,14 +331,14 @@ function replicate!(com::ImagineCommand, nreps::Int)
     return com
 end
 
-function pop!(com::ImagineCommand)
+function pop!{T<:RLEVector}(com::ImagineCommand{T})
     pop!(cumlength(com))
     seq = pop!(sequences(com))
     nm = pop!(sequence_names(com))
     return seq
 end
 
-function empty!(com::ImagineCommand; clear_library = false)
+function empty!{T<:RLEVector}(com::ImagineCommand{T}; clear_library = false)
     empty!(com.cumlength)
     empty!(com.sequence_names)
     empty!(com.sequences)
@@ -368,7 +348,7 @@ function empty!(com::ImagineCommand; clear_library = false)
     return com
 end
 
-function replace!{T}(com::ImagineCommand, seqname::String, sequence::AbstractVector{T})
+function replace!{T<:RLEVector, TS}(com::ImagineCommand{T}, seqname::String, sequence::AbstractVector{TS})
     seqdict = sequence_lookup(com)
     if !haskey(seqdict, seqname)
         error("The requested sequence name was not found.  To add a new sequence by this name, use `append!(com, seqname, sequence)`")

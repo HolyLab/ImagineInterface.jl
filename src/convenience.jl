@@ -1,7 +1,7 @@
 #####Convenience functions for filtering arrays of Imagine commands by channel name, channel type######
 
-findname(coms::AbstractArray{ImagineCommand,1}, nm::String) = findfirst(x->name(x) == nm, coms)
-function getname(coms::AbstractArray{ImagineCommand,1}, nm::String)
+findname(coms::AbstractArray{ImagineCommand,1}, nm::AbstractString) = findfirst(x->name(x) == nm, coms)
+function getname(coms::AbstractArray{ImagineCommand,1}, nm::AbstractString)
     namei = findname(coms, nm)
     if namei == 0
         error("Name not found")
@@ -9,13 +9,13 @@ function getname(coms::AbstractArray{ImagineCommand,1}, nm::String)
         coms[findname(coms, nm)]
     end
 end
-finddaqchan(coms::AbstractArray{ImagineCommand,1}, nm::String) = findfirst(x->daq_channel(x) == nm, coms)
-getdaqchan(coms::AbstractArray{ImagineCommand,1}, nm::String) = coms[finddaqchan(coms, nm)]
+finddaqchan(coms::AbstractArray{ImagineCommand,1}, nm::AbstractString) = findfirst(x->daq_channel(x) == nm, coms)
+getdaqchan(coms::AbstractArray{ImagineCommand,1}, nm::AbstractString) = coms[finddaqchan(coms, nm)]
 
 isdigital(com::ImagineCommand)  = isdigital(daq_channel(com), rig_name(com))
 finddigital(coms::AbstractArray{ImagineCommand,1}) = find(x->isdigital(x), coms)
 getdigital(coms::AbstractArray{ImagineCommand,1}) = view(coms, finddigital(coms))
-isanalog(daq_chan::String, rig::String) = !isdigital(daq_chan, rig)
+isanalog(daq_chan::AbstractString, rig::AbstractString) = !isdigital(daq_chan, rig)
 isanalog(com::ImagineCommand)  = isanalog(daq_channel(com), rig_name(com))
 findanalog(coms::AbstractArray{ImagineCommand,1}) = find(x->!isdigital(x), coms)
 getanalog(coms::AbstractArray{ImagineCommand,1}) = view(coms, findanalog(coms))

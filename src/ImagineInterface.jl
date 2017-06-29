@@ -3,7 +3,7 @@ __precompile__()
 module ImagineInterface
 
 using JSON, Unitful
-using MappedArrays, AxisArrays, IntervalSets
+using MappedArrays, AxisArrays, IntervalSets, ImagineFormat
 using Compat
 
 import Base: convert, show, length, size, isempty, ==, append!, pop!, empty! #, scale
@@ -79,7 +79,9 @@ export getname,
 
 #parse.jl
 export parse_command,
-        parse_commands
+        parse_commands,
+        parse_ai,
+        parse_di
 
 #sequence_analysis.jl
 export find_pulse_starts,

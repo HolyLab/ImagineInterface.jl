@@ -1,0 +1,55 @@
+IMAGINE
+[general]
+header version=7
+app version=2.0, build (Jun 28 2017, 11:08:42)
+date and time=2017-06-28T11:40:22
+byte order=l
+rig=ocpi-2
+
+[misc params]
+stimulus file content=
+comment=
+ai data file=d:/test/t.ai
+di data file=d:/test/t.di
+image data file=d:/test/t.cam
+command file=d:/test/t.json
+piezo=start position: 100 um;stop position: 800 um;output scan rate: 10000;bidirection: 0
+
+[ai]
+nscans=-1
+channel list=0 2
+label list=axial piezo monitor$camera2 analog mon
+scan rate=10000
+min sample=-32768
+max sample=32767
+min input=-10
+max input=10
+
+[di]
+di nscans=-1
+di channel list=24 25
+di label list=camera1 frame monitor$camera2 frame monitor
+di scan rate=10000
+
+[camera]
+original image depth=16
+saved image depth=16
+image width=2060
+image height=2048
+number of frames requested=200
+nStacks=10
+idle time between stacks=0.7 s
+pre amp gain=
+gain=0
+exposure time=0.01 s
+vertical shift speed=
+vertical clock vol amp=-1
+readout rate=
+pixel order=x y z
+frame index offset=0
+frames per stack=20
+pixel data type=uint16
+camera=edge.main
+um per pixel=-1
+binning=hbin:1;vbin:1;hstart:1;hend:2060;vstart:1;vend:2048
+angle from horizontal (deg)=-1

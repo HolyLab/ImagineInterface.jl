@@ -3,4 +3,5 @@ AxisArrays
 IntervalSets
 Unitful
 MappedArrays
+ImagineFormat
 Compat 0.18

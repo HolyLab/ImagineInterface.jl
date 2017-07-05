@@ -282,7 +282,8 @@ const RIG_CHIP_SIZES = Dict("ocpi-1" => PCO_EDGE_5_5_CHIP_SIZE, "ocpi-2" => PCO_
 const PCO_EDGE_5_5_FRAMERATE_FUNC = x::Tuple{Int,Int} -> 100 * 2^(log(2, 2048/x[2]))
 const PCO_EDGE_4_2_FRAMERATE_FUNC = x::Tuple{Int,Int} -> 100 * 2^(log(2, 2048/x[2]))
 const RIG_FRAMERATE_FUNCS = Dict("ocpi-1" => PCO_EDGE_5_5_FRAMERATE_FUNC, "ocpi-2" => PCO_EDGE_4_2_FRAMERATE_FUNC) #TODO: add ocpi-lsk
-const EXPOSURE_TRIGGER_DELAY = 0.0 * Unitful.ns #TODO: Get this with PCO_GetImageTiming 
+#const EXPOSURE_TRIGGER_DELAY = 0.0 * Unitful.ns #This is trivially short.  See measurements posted in ImagineInterface issue #18 
+const MINIMUM_EXPOSURE_SEPARATION = 19526.0 * Unitful.ns #This is the worst jitter measured with Edge 5.5 and 4.2 cameras, see ImagineInterface issue #18
 
 #For querying camera-related info
 function chip_size(rig::String)

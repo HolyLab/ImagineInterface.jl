@@ -27,7 +27,16 @@ include("stack.jl")
 
 #hardware_constants.jl
 export chip_size,
-        max_framerate
+        max_framerate,
+        isfree,
+        isdigital,
+        isoutput
+        ispos,
+        isposmonitor,
+        iscam,
+        iscammonitor,
+        islas,
+        isstim
 
 #imaginecommand.jl
 export ImagineCommand,
@@ -42,7 +51,6 @@ export ImagineCommand,
         interval_raw,
         interval_volts,
         interval_world,
-	isdigital,
         sequences,
 	sequence_names,
 	sequence_lookup,

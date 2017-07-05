@@ -70,13 +70,22 @@ sampsd = decompress(las1, 1, nsamps; sampmap=:raw)
 
 #convenience
 digs = getdigital(allcoms)
-@test all(map(isdigital, digs))
+for c in digs
+    if isoutput(c)
+        @test in(daq_channel(c), ImagineInterface.DO_CHANS[rig])
+    else
+        @test in(daq_channel(c), ImagineInterface.DI_CHANS[rig])
+    end
+end
+
 angs = getanalog(allcoms)
-@test all(map(!, map(isdigital, angs)))
-#getcameras
-#getlasers
-#getpositioners
-#getstimuli
+for c in angs
+    if isoutput(c)
+        @test in(daq_channel(c), ImagineInterface.AO_CHANS[rig])
+    else
+        @test in(daq_channel(c), ImagineInterface.AI_CHANS[rig])
+    end
+end
 
 #write
 outname = "test.json"
@@ -117,6 +126,12 @@ dat = decompress(pos, "ramp_up")
 append!(pos, "ramp_up") #append existing
 @test length(pos) == 2*typemax(Int16)+2
 
+#test invalid sample types
+rawdat = Int32[1:5...]
+@test_throws(Exception, append!(pos, "bad", rawdat))
+rawdat = Float64[1:5...] * Unitful.A
+@test_throws(Exception, append!(pos, "bad", rawdat))
+
 #test bounds checking
 rawdat = Int16[-5:1:5...] #negative samples for the positioner should be invalid
 @test_throws(Exception, append!(pos, "bad", rawdat))
@@ -125,6 +140,14 @@ rawdat = Int16[-5:1:5...] * Unitful.V
 rawdat = Int16[-5:1:5...] * Unitful.μm
 @test_throws(Exception, append!(pos, "bad", rawdat))
 
+#rename!
+@test !isfree(pos)
+@test_throws(Exception, rename!(pos, "mypiezo"))
+c = ocpi1[findfirst(x->isfree(x), ocpi1)]
+nm = name(c)
+rename!(c, "new name")
+@test name(c) == "new name"
+rename!(c, nm)
 
 #replace!
 rawdat2 = Int16[typemax(Int16):-1:0...]

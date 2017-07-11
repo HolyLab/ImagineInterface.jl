@@ -184,7 +184,7 @@ function get_missing_monitors(coms_used)
     output = similar(coms_used, 0)
     for c in coms_used
         if hasmonitor(c)
-            if !isempty(findname(coms_used, getmonitor_name(c)))
+            if !isempty(findname(coms_used, monitor_name(c)))
                 push!(output, getmonitor(c))
             end
         end

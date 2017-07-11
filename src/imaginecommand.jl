@@ -72,23 +72,32 @@ function show(io::IO, com::ImagineCommand)
     print(io, "                    Rig: $(rig_name(com))\n")
     print(io, "               Raw type: $(rawtype(com))\n")
     print(io, "              Intervals: $(intervals(com))\n")
-    print(io, "               Duration: $(length(com)/samprate(com))\n")
+    print(io, "               Duration: $(duration(com))\n")
     print(io, "      Duration(samples): $(length(com))\n")
 end
 
 Base.length(com::ImagineCommand) = isempty(com) ? 0 : com.cumlength[end]
+duration(com::ImagineCommand) = length(com)/samprate(com)
 Base.size(C::ImagineCommand)    = length(C)
 Base.isempty(com::ImagineCommand) = isempty(cumlength(com))
 
-function ==(com1::ImagineCommand, com2::ImagineCommand)
-    eq = true
-    for nm in fieldnames(com1)
+==(com1::ImagineCommand, com2::ImagineCommand) = fieldnames_equal(com1, com2, union(fieldnames(com1), fieldnames(com2)))
+
+function fieldnames_equal(com1::ImagineCommand, com2::ImagineCommand, nms::Vector{Symbol})
+    is_eq = true
+    for nm in nms
         if getfield(com1, nm) != getfield(com2, nm)
-            eq = false
+            is_eq = false
             break
         end
     end
-    return eq
+    return is_eq
+end
+
+function is_similar(com1::ImagineCommand, com2::ImagineCommand)
+    can_differ = [:sequences; :sequence_names; :sequence_lookup; :cumlength] #fields related to the count and values of samples
+    must_match = setdiff(union(fieldnames(com1), fieldnames(com2)), can_differ)
+    return fieldnames_equal(com1, com2, must_match)
 end
 
 name(com::ImagineCommand) = com.chan_name

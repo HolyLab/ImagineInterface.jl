@@ -58,7 +58,9 @@ getstimuli(coms::AbstractArray{ImagineCommand,1}) = view(coms, findstimuli(coms)
 
 
 hasmonitor(com::ImagineCommand) = iscam(com) || ispos(com)
-function getmonitor_name(com::ImagineCommand)
+hasactuator(com::ImagineCommand) = iscammonitor(com) || isposmonitor(com)
+
+function monitor_name(com::ImagineCommand)
     if !hasmonitor(com)
         error("There is not monitor (input) corresponding to this channel")
     end
@@ -69,7 +71,24 @@ function getmonitor_name(com::ImagineCommand)
     end
 end
 function getmonitor(com::ImagineCommand)
-    mon_nm = getmonitor_name(com)
+    mon_nm = monitor_name(com)
     temp = rigtemplate(rig_name(com); sample_rate = samprate(com))
     return getname(temp, mon_nm)
 end
+
+function actuator_name(com::ImagineCommand)
+    if !hasactuator(com)
+        error("There is not actuator (output) corresponding to this channel")
+    end
+    if iscammonitor(com)
+        return String(split(name(com), " frame monitor")[1])
+    else
+        return String(split(name(com), " monitor")[1])
+    end
+end
+function getactuator(com::ImagineCommand)
+    act_nm = actuator_name(com)
+    temp = rigtemplate(rig_name(com); sample_rate = samprate(com))
+    return getname(temp, act_nm)
+end
+

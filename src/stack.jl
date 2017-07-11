@@ -101,8 +101,8 @@ function gen_bidirectional_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasI
         error("Use the gen_2d_timeseries function instead of setting pmin and pmax to the same value")
     end
     flash = true
-    if flash_frac > 1
-        warn("las_frac was set greater than 1, so defaulting to keeping laser on throughout the stack")
+    if flash_frac >= 1.0
+        warn("las_frac was set greater than 1.0, so keeping laser on throughout the stack")
         flash = false
     elseif flash_frac <= 0
         error("las_frac must be positive")

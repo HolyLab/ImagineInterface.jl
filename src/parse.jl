@@ -89,14 +89,14 @@ function parse_ai(ai_name::String; imagine_header = splitext(ai_name)[1]*".imagi
         vectyp = typeof(samps)
         sampsarr = Array{vectyp}(0)
         push!(sampsarr, samps)
-        lookup_nm = randstring(12)
+        lookup_nm = string(hash(daq_chan_str))
         mon = ImagineCommand{vectyp}(labs[i], daq_chan_str, rig, sampsarr, [lookup_nm;], Dict(lookup_nm=>samps), [length(samps);], mapper(com))
         push!(output, mon)
     end
     return output
 end
 
-function parse_di(di_name::String; imagine_header = splitext(di_name)[1]*".imagine")
+function parse_di(di_name::String; imagine_header = splitext(di_name)[1]*".imagine", load_unused = false)
     if !isfile(di_name) && isfile(di_name*".di")
         di_name = di_name*".di"
     end
@@ -125,16 +125,87 @@ function parse_di(di_name::String; imagine_header = splitext(di_name)[1]*".imagi
             warn("DAQ channel $(daq_chan_str) is not a digital input channel for this rig.  Attempting to load it anyway.")
         end
         com = incoms[comi]
-        biti = DI_BIT_FIELDS[rig][daq_chan_str] + 1
-        samps = view(A, biti, :)
-        vectyp = typeof(samps)
-        sampsarr = Array{vectyp}(0)
-        push!(sampsarr, samps)
-        lookup_nm = randstring(12)
-        mpr = SampleMapper(false, true, 0.0*Unitful.V, 3.3*Unitful.V, false, true, samp_rate) #unlike for outputs, the raw type is Bool
-        mon = ImagineCommand{vectyp}(labs[i], daq_chan_str, rig, sampsarr, [lookup_nm;], Dict(lookup_nm=>samps), [length(samps);], mpr)
-        push!(output, mon)
+        biti = findfirst(x->x==chns[i], hdr["di channel list"])
+        if biti != findfirst(x->x==daq_chan_str, DI_CHANS[rig])
+            warn("DI channel list entry #$(biti) found in the .imagine header does not match the expected entry for this rig. Loading anyway, but please report this issue")
+        end
+        if labs[i] != "unused" || load_unused
+            samps = view(A, biti, :)
+            vectyp = typeof(samps)
+            sampsarr = Array{vectyp}(0)
+            push!(sampsarr, samps)
+            lookup_nm = string(hash(daq_chan_str))
+            mpr = SampleMapper(false, true, 0.0*Unitful.V, 3.3*Unitful.V, false, true, samp_rate) #unlike for outputs, the raw type is Bool
+            mon = ImagineCommand{vectyp}(labs[i], daq_chan_str, rig, sampsarr, [lookup_nm;], Dict(lookup_nm=>samps), [length(samps);], mpr)
+            push!(output, mon)
+        end
     end
     return output
 end
 
+function append_or_replace!(coms::Vector{ImagineCommand}, newcoms)
+    for c in newcoms
+        i = findname(coms, name(c))
+        if i != 0
+            coms[i] = c
+        else
+            append!(coms, c)
+        end
+    end
+    return coms
+end
+
+function load_signals(any_name::AbstractString)
+    if !isfile(any_name)
+        error("File not found")
+    end
+    extn = splitext(any_name)[2]
+    basenm = splitext(any_name)[1]
+    if extn != ".json" && !isfile(basenm * ".json") && !isfile(basenm * ".imagine")
+        error("A matching .json or .imagine header was not found in the supplied directory, so the experiment cannot be loaded")
+    end
+
+    coms = ImagineCommand[]
+    comnm = basenm * ".json"
+    has_comfile = false
+    if isfile(comnm)
+        has_comfile = true
+        append!(coms, parse_commands(comnm))
+    else
+        warn("A matching .json command file was not found in the supplied directory.  Attempting to load .ai and .di file anyway")
+    end
+    ainm = basenm * ".ai"
+    dinm = basenm * ".di"
+    if isempty(coms) && !isfile(ainm) && !isfile(dinm)
+        error("Cannot load anything: no .json file was found, and no .ai or .di file was found to match the .imagine file")
+    end
+
+    if isfile(ainm)
+        ai_sigs = parse_ai(ainm)
+        if has_comfile
+            for s in ai_sigs
+                if !is_similar(s, getname(coms, name(s)))
+                    error("AI file signal $(name(s)) does not match the entry found in the .json command file")
+                end
+            end
+        end
+        append_or_replace!(coms, ai_sigs)
+    else
+        warn("Analog input file (with .ai extension) was not found in the supplied directory")
+    end
+
+    if isfile(dinm)
+        di_sigs = parse_di(dinm)
+        if has_comfile
+            for s in di_sigs
+                if !is_similar(s, getname(coms, name(s)))
+                    error("DI file signal $(name(s)) does not match the entry found in the .json command file")
+                end
+            end
+        end
+        append_or_replace!(coms, di_sigs)
+    else
+        warn("Digital input file (with .di extension) was not found in the supplied directory")
+    end
+    return coms
+end

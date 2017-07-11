@@ -175,37 +175,37 @@ const DEFAULT_NAMES_TO_DAQCHANS = Dict("ocpi-1" => map(reverse, ocpi1_mappings),
 const ocpi1_aochans = map(x->"AO$(x)", 0:1)
 const ocpi2_aochans = map(x->"AO$(x)", 0:3) 
 const ocpi_lsk_aochans = map(x->"AO$(x)", [0;2;3]) 
-const AO_CHANS= Dict("ocpi-1" => ocpi1_aochans,
-                      "ocpi-2" => ocpi2_aochans,
-                      "ocpi-lsk" => ocpi_lsk_aochans)
+const AO_CHANS= Dict("ocpi-1" => OrderedSet(ocpi1_aochans),
+                      "ocpi-2" => OrderedSet(ocpi2_aochans),
+                      "ocpi-lsk" => OrderedSet(ocpi_lsk_aochans))
 #Lists of analog input channels                      
 const ocpi1_aichans = map(x->"AI$(x)", vcat([0;], [2:15...])) #currently AI1 is unused 
 const ocpi2_aichans = map(x->"AI$(x)", 0:31)
 const ocpi_lsk_aichans = map(x->"AI$(x)", vcat([0;], [2:15...])) #currently AI1 is unused 
-const AI_CHANS= Dict("ocpi-1" => ocpi1_aichans,
-                      "ocpi-2" => ocpi2_aichans,
-                      "ocpi-lsk" => ocpi_lsk_aichans)
+const AI_CHANS= Dict("ocpi-1" => OrderedSet(ocpi1_aichans),
+                      "ocpi-2" => OrderedSet(ocpi2_aichans),
+                      "ocpi-lsk" => OrderedSet(ocpi_lsk_aichans))
 #Lists of digital output channels
 const ocpi1_dochans = map(x->"P0.$(x)", 0:6)
 const ocpi2_dochans = map(x->"P0.$(x)", vcat([0:6...], [8:23...])) 
 const ocpi_lsk_dochans = map(x->"P0.$(x)", vcat([0:5...], [13:23...])) 
-const DO_CHANS= Dict("ocpi-1" => ocpi1_dochans,
-                      "ocpi-2" => ocpi2_dochans,
-                      "ocpi-lsk" => ocpi_lsk_dochans)
+const DO_CHANS= Dict("ocpi-1" => OrderedSet(ocpi1_dochans),
+                      "ocpi-2" => OrderedSet(ocpi2_dochans),
+                      "ocpi-lsk" => OrderedSet(ocpi_lsk_dochans))
 #Lists of digital input channels                      
 const ocpi1_dichans = ["P0.7";]
 const ocpi2_dichans = map(x->"P0.$(x)", 24:31)
 const ocpi_lsk_dichans = map(x->"P0.$(x)", vcat([24;], [26:31...]))
-const DI_CHANS= Dict("ocpi-1" => ocpi1_dichans,
-                      "ocpi-2" => ocpi2_dichans,
-                      "ocpi-lsk" => ocpi_lsk_dichans)
+const DI_CHANS= Dict("ocpi-1" => OrderedSet(ocpi1_dichans),
+                      "ocpi-2" => OrderedSet(ocpi2_dichans),
+                      "ocpi-lsk" => OrderedSet(ocpi_lsk_dichans))
 
-const ocpi1_bit_fields = Dict(zip(sort(ocpi1_dichans), 0:(length(ocpi1_dichans)-1)))
-const ocpi2_bit_fields = Dict(zip(sort(ocpi2_dichans), 0:(length(ocpi2_dichans)-1)))
-const ocpi_lsk_bit_fields = Dict(zip(sort(ocpi_lsk_dichans), 0:(length(ocpi_lsk_dichans)-1)))
-const DI_BIT_FIELDS = Dict("ocpi-1" => ocpi1_bit_fields,
-                      "ocpi-2" => ocpi2_bit_fields,
-                      "ocpi-lsk" => ocpi_lsk_bit_fields)
+#const ocpi1_bit_fields = Dict(zip(sort(ocpi1_dichans), 0:(length(ocpi1_dichans)-1)))
+#const ocpi2_bit_fields = Dict(zip(sort(ocpi2_dichans), 0:(length(ocpi2_dichans)-1)))
+#const ocpi_lsk_bit_fields = Dict(zip(sort(ocpi_lsk_dichans), 0:(length(ocpi_lsk_dichans)-1)))
+#const DI_BIT_FIELDS = Dict("ocpi-1" => ocpi1_bit_fields,
+#                      "ocpi-2" => ocpi2_bit_fields,
+#                      "ocpi-lsk" => ocpi_lsk_bit_fields)
 
 #Lists of positioner control daq channels (a subset of AO_CHANS)                                      
 const ocpi1_pos_ctrl_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-1"][x], ["axial piezo"])
@@ -249,9 +249,9 @@ const LAS_CONTROL_CHANS= Dict("ocpi-1" => ocpi1_laschans,
 const ocpi1_stimchans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-1"][x], ["stimulus$x" for x = 1:5])
 const ocpi2_stimchans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-2"][x], ["stimulus$x" for x = 1:15])
 const ocpi_lsk_stimchans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-lsk"][x], ["stimulus$x" for x = 1:15])
-const STIM_CHANS= Dict("ocpi-1" => ocpi1_stimchans,
-                      "ocpi-2" => ocpi2_stimchans,
-                      "ocpi-lsk" => ocpi_lsk_stimchans)
+const STIM_CHANS= Dict("ocpi-1" => OrderedSet(ocpi1_stimchans),
+                      "ocpi-2" => OrderedSet(ocpi2_stimchans),
+                      "ocpi-lsk" => OrderedSet(ocpi_lsk_stimchans))
 
 daq_channel_number(ch::String) = parse(Int, last(split("AO0", ['.', 'I', 'O'])))
 

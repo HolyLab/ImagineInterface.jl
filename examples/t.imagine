@@ -1,25 +1,25 @@
 IMAGINE
 [general]
 header version=7
-app version=2.0, build (Jun 28 2017, 11:08:42)
-date and time=2017-06-28T11:40:22
+app version=2.0, build (Jul  5 2017, 10:40:58)
+date and time=2017-07-05T11:13:58
 byte order=l
 rig=ocpi-2
 
 [misc params]
 stimulus file content=
 comment=
-ai data file=d:/test/t.ai
-di data file=d:/test/t.di
-image data file=d:/test/t.cam
-command file=d:/test/t.json
-piezo=start position: 100 um;stop position: 800 um;output scan rate: 10000;bidirection: 0
+ai data file=t.ai
+di data file=t.di
+image data file=d:t.cam
+command file=t.json
+piezo=start position: NA;stop position: NA;output scan rate: 50000;bidirection: 0
 
 [ai]
 nscans=-1
 channel list=0 2
-label list=axial piezo monitor$camera2 analog mon
-scan rate=10000
+label list=axial piezo monitor$camera1 analog monitor
+scan rate=50000
 min sample=-32768
 max sample=32767
 min input=-10
@@ -27,27 +27,27 @@ max input=10
 
 [di]
 di nscans=-1
-di channel list=24 25
-di label list=camera1 frame monitor$camera2 frame monitor
-di scan rate=10000
+di channel list=24 25 26 27 28 29 30 31
+di label list=camera1 frame monitor$camera2 frame monitor$laser monitor$unused$unused$unused$unused$unused
+di scan rate=50000
 
 [camera]
 original image depth=16
 saved image depth=16
 image width=2060
 image height=2048
-number of frames requested=200
+number of frames requested=650
 nStacks=10
-idle time between stacks=0.7 s
+idle time between stacks=NA
 pre amp gain=
 gain=0
-exposure time=0.01 s
+exposure time=0.011 s
 vertical shift speed=
 vertical clock vol amp=-1
 readout rate=
 pixel order=x y z
 frame index offset=0
-frames per stack=20
+frames per stack=65
 pixel data type=uint16
 camera=edge.main
 um per pixel=-1

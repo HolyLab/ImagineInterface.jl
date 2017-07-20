@@ -4,9 +4,9 @@ findname(coms::AbstractArray{ImagineCommand,1}, nm::AbstractString) = findfirst(
 function getname(coms::AbstractArray{ImagineCommand,1}, nm::AbstractString)
     namei = findname(coms, nm)
     if namei == 0
-        error("Name not found")
+        error("Name $nm not found")
     else
-        coms[findname(coms, nm)]
+        coms[namei]
     end
 end
 finddaqchan(coms::AbstractArray{ImagineCommand,1}, nm::AbstractString) = findfirst(x->daq_channel(x) == nm, coms)

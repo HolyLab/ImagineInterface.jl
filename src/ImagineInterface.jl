@@ -15,7 +15,10 @@ using Unitful: μm, s, V
 @compat const HasLengthUnits{T,U} = Quantity{T, typeof(0.0μm).parameters[2], U}
 
 include("metadata_constants.jl")
-include("hardware_constants.jl")
+#Load hardware parameters for all rigs
+for rig_file in readdir("../rigs")
+    include(joinpath("../rigs", rig_file))
+end
 include("samplemapper.jl")
 include("imaginecommand.jl")
 include("hardware_templates.jl")

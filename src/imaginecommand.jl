@@ -9,22 +9,11 @@ count{T}(rv::RepeatedValue{T}) = rv.n
 convert{T}(::Type{RepeatedValue{T}}, rv::RepeatedValue) = RepeatedValue{T}(rv.n, rv.value)
 
 "RLEVector is a run-length encoded vector"
-@compat const RLEVector{T} = Vector{RepeatedValue{T}}
-
-# julia-0.5 has trouble building containers of abstractly-typed
-# objects, so we use RLEVector{Any} for all objects. With higher
-# versions of Julia, we attempt to allow concretely-typed vectors.
-if VERSION < v"0.6.0-pre"
-    const RLEVec = RLEVector{Any}
-    convert(::Type{RLEVector}, v::AbstractVector) = convert(RLEVector{Any}, v)
-else
-    const RLEVec = RLEVector
-    # Use the first "real" value to infer the type. Not type-stable.
-    convert(::Type{RLEVector}, v::AbstractVector) = isempty(v) ?
-        convert(RLEVector{Any}, v) :
-        convert(RLEVector{typeof(v[2])}, v)
-end
-
+const RLEVector{T} = Vector{RepeatedValue{T}}
+# Use the first "real" value to infer the type. Not type-stable.
+convert(::Type{RLEVector}, v::AbstractVector) = isempty(v) ?
+convert(RLEVector{Any}, v) :
+convert(RLEVector{typeof(v[2])}, v)
 convert{T}(::Type{RLEVector{T}}, v::RLEVector{T}) = v
 convert{T,S}(::Type{RLEVector{T}}, v::RLEVector{S}) = [convert(RepeatedValue{T}, rv) for rv in v]
 convert(::Type{RLEVector}, v::RLEVector) = v
@@ -137,7 +126,7 @@ function calc_cumlength!{T<:AbstractVector}(output::Vector{Int}, seqs::Vector{T}
     end
     return output
 end
-function calc_cumlength!{RV<:RLEVec}(output::Vector{Int}, seqs::Vector{RV})
+function calc_cumlength!{RV<:RLEVector}(output::Vector{Int}, seqs::Vector{RV})
     if !isempty(seqs)
         output[1] = sum(s.n for s in seqs[1])
         for i = 2:length(seqs)
@@ -228,7 +217,7 @@ end
 decompress_raw{T<:AbstractVector}(com::ImagineCommand{T}, istart::Int, istop::Int) = sequences(com)[1][istart:istop]
 
 #This version gets called for output signals
-function decompress_raw{T<:RLEVec}(com::ImagineCommand{T}, istart::Int, istop::Int)
+function decompress_raw{T<:RLEVector}(com::ImagineCommand{T}, istart::Int, istop::Int)
     if istart < 1 || istop > length(com) #bounds check
         error("The requested time interval is out of bounds")
     end

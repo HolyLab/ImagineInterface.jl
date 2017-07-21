@@ -56,13 +56,13 @@ function rigtemplate{U}(rig::String; sample_rate::HasInverseTimeUnits{Int,U} = 1
         else
             ao_sampmapper = generic_ao_samplemapper(generic_ao_range[rig]; rawtype = Int16, sample_rate = sample_rate)
         end
-        ao_vectype = RLEVec{rawtype(ao_sampmapper)}
+        ao_vectype = RLEVector{rawtype(ao_sampmapper)}
         push!(coms, ImagineCommand{ao_vectype}(name_lookup[c], c, rig, [], String[], shared_dict, Int[], ao_sampmapper))
     end
 
     #digital outputs (includes cameras, lasers, and stimulus channels)
     do_sampmapper = ttl_samplemapper(;sample_rate = sample_rate)
-    do_vectype = RLEVec{rawtype(do_sampmapper)}
+    do_vectype = RLEVector{rawtype(do_sampmapper)}
     for c in DO_CHANS[rig]
         push!(coms, ImagineCommand{do_vectype}(name_lookup[c], c, rig, [], String[], shared_dict, Int[], do_sampmapper))
     end

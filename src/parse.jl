@@ -34,10 +34,10 @@ function parse_command(d::Dict, comname::String)
 end
 
 #In the JSON arrays, waveforms and counts-of-waves are specified in alternating order: count,wave,count,wave...
-function _parse_command(rig_name::String, chan_name::String, daq_chan_name::String, seqs_compressed::RLEVec, seqs_lookup::Dict, sample_rate::HasInverseTimeUnits)
+function _parse_command(rig_name::String, chan_name::String, daq_chan_name::String, seqs_compressed::RLEVector, seqs_lookup::Dict, sample_rate::HasInverseTimeUnits)
     sampmapper = default_samplemapper(rig_name, daq_chan_name; sample_rate = sample_rate)
     rawtyp = rawtype(sampmapper)
-    vectype = isoutput(daq_chan_name, rig_name) ? RLEVec{rawtyp} : AbstractVector{rawtyp}
+    vectype = isoutput(daq_chan_name, rig_name) ? RLEVector{rawtyp} : AbstractVector{rawtyp}
     seqlist = Vector{vectype}(0)
     seqnames = String[]
     if !isoutput(daq_chan_name, rig_name) && !isempty(seqs_compressed)

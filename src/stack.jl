@@ -49,6 +49,9 @@ function spaced_intervals{TS, TT}(samples_space::Ranges.LinSpace{TS}, interval_s
         error("The requested spacing results in overlapping intervals.  Increase interval_spacing, decrease interval_duration, or change sampling rate.")
     end
     inter_samps = spacing_samps - dur_samps #number of samples between end of one interval and start of the next
+    if inter_samps < ceil(Int, MINIMUM_EXPOSURE_SEPARATION/samp_duration)
+        error("The requested spacing results in intervals which are too close in time for the jitter specification of the camera.  Increase interval_spacing, decrease interval_duration, or change sampling rate")
+    end
     cycle_samps = inter_samps + dur_samps #number of samples in one whole cycle
     nintervals = div(nsamps, cycle_samps)
     extra = mod(nsamps-dur_samps, cycle_samps) #first cycle is partial
@@ -98,8 +101,8 @@ function gen_bidirectional_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasI
         error("Use the gen_2d_timeseries function instead of setting pmin and pmax to the same value")
     end
     flash = true
-    if flash_frac > 1
-        warn("las_frac was set greater than 1, so defaulting to keeping laser on throughout the stack")
+    if flash_frac >= 1.0
+        warn("las_frac was set greater than 1.0, so keeping laser on throughout the stack")
         flash = false
     elseif flash_frac <= 0
         error("las_frac must be positive")

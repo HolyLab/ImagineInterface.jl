@@ -10,13 +10,13 @@ type SampleMapper{Traw,TW}
     samprate::HasInverseTimeUnits
 end
 
-raw2volts{Traw,TW}(mapper::SampleMapper{Traw,TW}) = x::Traw -> mapper.voltmin + ((x-mapper.rawmin)/(mapper.rawmax-mapper.rawmin))*(mapper.voltmax-mapper.voltmin)
+raw2volts{Traw,TW}(mapper::SampleMapper{Traw,TW}) = x::Traw -> mapper.voltmin + ((Int(x)-mapper.rawmin)/(Int(mapper.rawmax)-mapper.rawmin))*(mapper.voltmax-mapper.voltmin)
 volts2world{Traw,TW}(mapper::SampleMapper{Traw,TW}) = x::HasVoltageUnits -> convert(TW, mapper.worldmin + ((x-mapper.voltmin)/(mapper.voltmax-mapper.voltmin))*(mapper.worldmax-mapper.worldmin))
 world2volts{Traw,TW}(mapper::SampleMapper{Traw,TW}) = x::TW -> mapper.voltmin + ((x-mapper.worldmin)/(mapper.worldmax-mapper.worldmin))*(mapper.voltmax-mapper.voltmin)
 
 function volts2raw{Traw,TW}(mapper::SampleMapper{Traw,TW})
     bc = bounds_check(mapper)
-    return x::HasVoltageUnits -> bc(round(rawtype(mapper), mapper.rawmin + ((x-mapper.voltmin)/(mapper.voltmax-mapper.voltmin))*(mapper.rawmax-mapper.rawmin)))
+    return x::HasVoltageUnits -> bc(round(rawtype(mapper), mapper.rawmin + ((x-mapper.voltmin)/(mapper.voltmax-mapper.voltmin))*(Int(mapper.rawmax)-mapper.rawmin)))
 end
 
 function world2raw{Traw,TW}(mapper::SampleMapper{Traw,TW})

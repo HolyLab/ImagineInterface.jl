@@ -3,19 +3,21 @@ __precompile__()
 module ImagineInterface
 
 using JSON, Unitful
-using MappedArrays, AxisArrays, IntervalSets
-using Compat
+using MappedArrays, AxisArrays, IntervalSets, DataStructures, ImagineFormat
 
 import Base: convert, show, length, size, isempty, ==, append!, pop!, empty! #, scale
 
 using Unitful: μm, s, V
-@compat const HasVoltageUnits{T,U} = Quantity{T, typeof(0.0V).parameters[2], U}
-@compat const HasTimeUnits{T,U} = Quantity{T, typeof(0.0s).parameters[2], U}
-@compat const HasInverseTimeUnits{T,U} = Quantity{T, typeof(inv(0.0s)).parameters[2], U}
-@compat const HasLengthUnits{T,U} = Quantity{T, typeof(0.0μm).parameters[2], U}
+const HasVoltageUnits{T,U} = Quantity{T, typeof(0.0V).parameters[2], U}
+const HasTimeUnits{T,U} = Quantity{T, typeof(0.0s).parameters[2], U}
+const HasInverseTimeUnits{T,U} = Quantity{T, typeof(inv(0.0s)).parameters[2], U}
+const HasLengthUnits{T,U} = Quantity{T, typeof(0.0μm).parameters[2], U}
 
 include("metadata_constants.jl")
-include("hardware_constants.jl")
+#Load hardware parameters for all rigs
+for rig_file in readdir("../rigs")
+    include(joinpath("../rigs", rig_file))
+end
 include("samplemapper.jl")
 include("imaginecommand.jl")
 include("hardware_templates.jl")
@@ -27,12 +29,22 @@ include("stack.jl")
 
 #hardware_constants.jl
 export chip_size,
-        max_framerate
+        max_framerate,
+        isfree,
+        isdigital,
+        isoutput
+        ispos,
+        isposmonitor,
+        iscam,
+        iscammonitor,
+        islas,
+        isstim
 
 #imaginecommand.jl
 export ImagineCommand,
         name,
         rename!,
+        duration,
         daq_channel,
         rig_name,
 	rawtype,
@@ -42,7 +54,6 @@ export ImagineCommand,
         interval_raw,
         interval_volts,
         interval_world,
-	isdigital,
         sequences,
 	sequence_names,
 	sequence_lookup,
@@ -63,9 +74,15 @@ export getname,
         getfree,
         getfixed,
         getpositioners,
+        getpositionermonitors,
         getcameras,
+        getcameramonitors,
         getlasers,
         getstimuli,
+        hasmonitor,
+        hasactuator,
+        monitor_name,
+        actuator_name,
         finddigital,
         findanalog,
         findinputs,
@@ -79,7 +96,10 @@ export getname,
 
 #parse.jl
 export parse_command,
-        parse_commands
+        parse_commands,
+        parse_ai,
+        parse_di,
+        load_signals
 
 #sequence_analysis.jl
 export find_pulse_starts,

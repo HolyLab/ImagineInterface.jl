@@ -109,6 +109,8 @@ function _write_commands!(out_dict, coms)
             dig_dict[name(c)] = Dict{String,Any}("daq channel"=>daq_channel(c))
             if isoutput(c) #only write the sequence field for outputs
                 dig_dict[name(c)]["sequence"] = compress(sequence_names(c))
+            elseif !isempty(sequence_names(c))
+                warn("Writing the $(name(c)) channel as an input even though it has one or more sample sequences")
             end
         else
             ana_dict[name(c)] = Dict{String,Any}("daq channel"=>daq_channel(c))
@@ -182,7 +184,7 @@ function get_missing_monitors(coms_used)
     output = similar(coms_used, 0)
     for c in coms_used
         if hasmonitor(c)
-            if !isempty(findname(coms_used, getmonitor_name(c)))
+            if !isempty(findname(coms_used, monitor_name(c)))
                 push!(output, getmonitor(c))
             end
         end

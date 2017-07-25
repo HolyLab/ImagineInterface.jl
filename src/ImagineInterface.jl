@@ -15,8 +15,9 @@ const HasLengthUnits{T,U} = Quantity{T, typeof(0.0μm).parameters[2], U}
 
 include("metadata_constants.jl")
 #Load hardware parameters for all rigs
-for rig_file in readdir("../rigs")
-    include(joinpath("../rigs", rig_file))
+rig_dir = joinpath(dirname(@__DIR__), "rigs")
+for rig_file in readdir(rig_dir)
+    include(joinpath(rig_dir, rig_file))
 end
 include("samplemapper.jl")
 include("imaginecommand.jl")

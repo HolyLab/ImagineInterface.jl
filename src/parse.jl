@@ -4,7 +4,7 @@ function parse_commands(filename::String)
 end
 
 function parse_commands(d::Dict)
-    output = ImagineCommand[]
+    output = ImagineSignal[]
     rig = d[METADATA_KEY]["rig"]
     for typ_key in (ANALOG_KEY, DIGITAL_KEY)
         for k in keys(d[typ_key])
@@ -51,7 +51,7 @@ function _parse_command(rig_name::String, chan_name::String, daq_chan_name::Stri
     end
     cumlen = zeros(Int, length(seqlist))
     calc_cumlength!(cumlen, seqlist)
-    return ImagineCommand{vectype}(chan_name, daq_chan_name, rig_name, seqlist, seqnames, seqs_lookup, cumlen, sampmapper)
+    return ImagineSignal{vectype}(chan_name, daq_chan_name, rig_name, seqlist, seqnames, seqs_lookup, cumlen, sampmapper)
 end
 
 function parse_ai(ai_name::String; imagine_header = splitext(ai_name)[1]*".imagine")
@@ -77,7 +77,7 @@ function parse_ai(ai_name::String; imagine_header = splitext(ai_name)[1]*".imagi
     nsamples = convert(Int,nbytes/nchannels/sizeof(aitype))
     f = open(ai_name, "r")
     A = Mmap.mmap(f, Matrix{aitype}, (nchannels,nsamples))
-    output = ImagineCommand[]
+    output = ImagineSignal[]
     for i = 1:length(chns)
         daq_chan_str = "AI$(chns[i])"
         comi = finddaqchan(incoms, daq_chan_str)
@@ -90,7 +90,7 @@ function parse_ai(ai_name::String; imagine_header = splitext(ai_name)[1]*".imagi
         sampsarr = Array{vectyp}(0)
         push!(sampsarr, samps)
         lookup_nm = string(hash(daq_chan_str))
-        mon = ImagineCommand{vectyp}(labs[i], daq_chan_str, rig, sampsarr, [lookup_nm;], Dict(lookup_nm=>samps), [length(samps);], mapper(com))
+        mon = ImagineSignal{vectyp}(labs[i], daq_chan_str, rig, sampsarr, [lookup_nm;], Dict(lookup_nm=>samps), [length(samps);], mapper(com))
         push!(output, mon)
     end
     return output
@@ -117,7 +117,7 @@ function parse_di(di_name::String; imagine_header = splitext(di_name)[1]*".imagi
     nsamples = filesize(di_name) #each sample is one byte
     f = open(di_name, "r")
     A = Mmap.mmap(f, BitArray, (8,nsamples))
-    output = ImagineCommand[]
+    output = ImagineSignal[]
     for i = 1:length(chns)
         daq_chan_str = "P0.$(chns[i])"
         comi = finddaqchan(incoms, daq_chan_str)
@@ -136,14 +136,14 @@ function parse_di(di_name::String; imagine_header = splitext(di_name)[1]*".imagi
             push!(sampsarr, samps)
             lookup_nm = string(hash(daq_chan_str))
             mpr = SampleMapper(false, true, 0.0*Unitful.V, 3.3*Unitful.V, false, true, samp_rate) #unlike for outputs, the raw type is Bool
-            mon = ImagineCommand{vectyp}(labs[i], daq_chan_str, rig, sampsarr, [lookup_nm;], Dict(lookup_nm=>samps), [length(samps);], mpr)
+            mon = ImagineSignal{vectyp}(labs[i], daq_chan_str, rig, sampsarr, [lookup_nm;], Dict(lookup_nm=>samps), [length(samps);], mpr)
             push!(output, mon)
         end
     end
     return output
 end
 
-function append_or_replace!(coms::Vector{ImagineCommand}, newcoms)
+function append_or_replace!(coms::Vector{ImagineSignal}, newcoms)
     for c in newcoms
         i = findname(coms, name(c))
         if i != 0
@@ -165,7 +165,7 @@ function load_signals(any_name::AbstractString)
         error("A matching .json or .imagine header was not found in the supplied directory, so the experiment cannot be loaded")
     end
 
-    coms = ImagineCommand[]
+    coms = ImagineSignal[]
     comnm = basenm * ".json"
     has_comfile = false
     if isfile(comnm)

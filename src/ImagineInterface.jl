@@ -41,7 +41,7 @@ export chip_size,
         isstim
 
 #imaginecommand.jl
-export ImagineCommand,
+export ImagineSignal,
         name,
         rename!,
         duration,
@@ -58,7 +58,7 @@ export ImagineCommand,
 	sequence_names,
 	sequence_lookup,
         mapper,
-        decompress,
+        get_samples,
         replace!,
         replicate!
 
@@ -119,5 +119,8 @@ export gen_sweep,
         gen_bidirectional_stack,
         gen_unidirectional_stack,
         gen_2d_timeseries
+#deprecations
+@deprecate ImagineCommand ImagineSignal
+@deprecate decompress(args...;kwargs...) get_samples(args...;kwargs...)
 
 end #module

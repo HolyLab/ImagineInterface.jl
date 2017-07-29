@@ -66,8 +66,8 @@ nexp_do = count_pulses(getname(do_coms, "camera1"))
 npulse_laser = count_pulses(getname(do_coms, "all lasers"))
 @test nexp_di == nexp_ai == nexp_do == npulse_laser == hdr["number of frames requested"]
 
-pos_ao = ustrip(decompress(getname(ao_coms, "axial piezo")))
-pos_ai = ustrip(decompress(getname(ai_recs, "axial piezo monitor")))
+pos_ao = ustrip(get_samples(getname(ao_coms, "axial piezo")))
+pos_ai = ustrip(get_samples(getname(ai_recs, "axial piezo monitor")))
 @test cor(pos_ao, pos_ai) >= 0.99
 
 #Automatic .json, .ai, .di, and .imagine loading

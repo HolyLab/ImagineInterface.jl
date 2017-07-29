@@ -37,8 +37,8 @@ las1 = getname(allcoms, nm)
 
 #decompression
 #world-mapped, analog
-sampsa0 = decompress(pos, 1, nsamps; sampmap=:world)
-sampsa = decompress(getname(allcoms, "axial piezo") , 1, nsamps; sampmap=:world)
+sampsa0 = get_samples(pos, 1, nsamps; sampmap=:world)
+sampsa = get_samples(getname(allcoms, "axial piezo") , 1, nsamps; sampmap=:world)
 @test length(sampsa) == nsamps
 @test all(sampsa0.==sampsa)
 
@@ -50,21 +50,21 @@ axsv = axisvalues(axs[1])
 @test axsv[1] == linspace(0.0*Unitful.s,6.9999*Unitful.s,nsamps)
 
 #voltage-mapped, analog
-sampsa = decompress(pos, 1, nsamps; sampmap=:volts)
+sampsa = get_samples(pos, 1, nsamps; sampmap=:volts)
 @test unit(sampsa[1]) == Unitful.V
 
 #raw, analog
-sampsa = decompress(pos, 1, nsamps; sampmap=:raw)
+sampsa = get_samples(pos, 1, nsamps; sampmap=:raw)
 @test eltype(sampsa) == rawtype(pos) #Int16 by default
 
 #world-mapped, digital
-sampsd = decompress(las1, 1, nsamps; sampmap=:world)
+sampsd = get_samples(las1, 1, nsamps; sampmap=:world)
 @test length(sampsd) == nsamps
 
-sampsd = decompress(las1, 1, nsamps; sampmap=:volts)
+sampsd = get_samples(las1, 1, nsamps; sampmap=:volts)
 @test unit(sampsd[1]) == Unitful.V
 
-sampsd = decompress(las1, 1, nsamps; sampmap=:raw)
+sampsd = get_samples(las1, 1, nsamps; sampmap=:raw)
 @test eltype(sampsd) == rawtype(las1) #UInt8 by default
 
 
@@ -120,7 +120,7 @@ ocpi2 = rigtemplate("ocpi-2"; sample_rate = 20000*Unitful.s^-1)
 pos = getpositioners(ocpi2)[1]
 rawdat = Int16[0:typemax(Int16)...]
 append!(pos, "ramp_up", rawdat)
-dat = decompress(pos, "ramp_up")
+dat = get_samples(pos, "ramp_up")
 @test dat[1] == mapper(pos).worldmin
 @test dat[end] == mapper(pos).worldmax
 append!(pos, "ramp_up") #append existing
@@ -152,19 +152,19 @@ rename!(c, nm)
 #replace!
 rawdat2 = Int16[typemax(Int16):-1:0...]
 replace!(pos, "ramp_up", rawdat2)
-dat = decompress(pos, "ramp_up")
+dat = get_samples(pos, "ramp_up")
 @test dat[end] == mapper(pos).worldmin
 @test dat[1] == mapper(pos).worldmax
 rawdat3 = Int16[0;0;typemax(Int16)] #change length
 replace!(pos, "ramp_up", rawdat3)
-dat = decompress(pos, "ramp_up")
+dat = get_samples(pos, "ramp_up")
 @test dat[1] == mapper(pos).worldmin
 @test dat[3] == mapper(pos).worldmax
 @test length(pos) == 6
 
 #pop!
 pop!(pos)
-dat = decompress(pos, "ramp_up")
+dat = get_samples(pos, "ramp_up")
 @test dat[1] == mapper(pos).worldmin
 @test dat[3] == mapper(pos).worldmax
 @test length(pos) == 3
@@ -179,13 +179,13 @@ empty!(pos; clear_library=true)
 #append! volts and world units
 newdat = Unitful.V * [0.0:0.1:10.0...]
 append!(pos, "ramp_up", newdat)
-dat = decompress(pos, "ramp_up")
+dat = get_samples(pos, "ramp_up")
 @test dat[1] == mapper(pos).worldmin
 @test dat[end] == mapper(pos).worldmax
 
 newdat = Unitful.μm * [0.0:0.8:800.0...]
 replace!(pos, "ramp_up", newdat)
-dat = decompress(pos, "ramp_up")
+dat = get_samples(pos, "ramp_up")
 @test dat[1] == mapper(pos).worldmin
 @test dat[end] == mapper(pos).worldmax
 

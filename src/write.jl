@@ -25,9 +25,9 @@
 	#store the number of repetitions of the value.  This is useful to compress signals that remain constant much of the time.
 	#The order is [samp1count, samp1value, samp2count, samp2value...]
 	#Currently we don't require that entries in the wave dict have consistent key strings, or even that they get used at all.
-	#TODO: when writing a set of ImagineCommands, check which wave entries get used and only write those
+	#TODO: when writing a set of ImagineSignals, check which wave entries get used and only write those
 
-function check_samptypes(coms::Vector{ImagineCommand}, rig::AbstractString)
+function check_samptypes(coms::Vector{ImagineSignal}, rig::AbstractString)
     #check that all analog and digital entries are acceptable for this rig
     tm = rigtemplate(rig)
     chans0 = map(daq_channel, tm)
@@ -45,15 +45,15 @@ function check_samptypes(coms::Vector{ImagineCommand}, rig::AbstractString)
     #check that all have equal number of samples
     nsamps = map(length, getoutputs(coms))
     if !all(nsamps.==nsamps[1])
-        error("All output commands must have an equal number of samples.  Check this with `length(com::ImagineCommand)`")
+        error("All output commands must have an equal number of samples.  Check this with `length(com::ImagineSignal)`")
     end
     return true
 end
 
-#instead of adding a CommandList type that shares a single wave lookup dict between multiple ImagineCommands...
+#instead of adding a CommandList type that shares a single wave lookup dict between multiple ImagineSignals...
 #combine into one dict before writing to file. do this by adding the sequence_lookup entries of each command to a growing dict.  Throw error if
 #pointers to dicts, arrays, or array values are not equal
-function combine_lookups(coms::Vector{ImagineCommand})
+function combine_lookups(coms::Vector{ImagineSignal})
     output = Dict()
     for c in coms
         sl = sequence_lookup(c)
@@ -70,7 +70,7 @@ function combine_lookups(coms::Vector{ImagineCommand})
     return output
 end
 
-compress_seqnames(c::ImagineCommand) = compress(sequence_names(c))
+compress_seqnames(c::ImagineSignal) = compress(sequence_names(c))
 
 function initialize_outdict{TT<:HasTimeUnits, TTI<:HasInverseTimeUnits}(rig::String, seq_lookup::Dict, nstacks, frames_per_stack, exp_time::TT, samp_rate::TTI, nsamps, isbidi)
     out_dict = Dict{String,Any}()
@@ -123,7 +123,7 @@ function _write_commands!(out_dict, coms)
 end
 
 #In order to be "sufficient" a command must include a positioner trace, at least one camera trace, and at least one laser trace
-function check_sufficiency(coms::Vector{ImagineCommand})
+function check_sufficiency(coms::Vector{ImagineSignal})
     if length(findcameras(coms)) == 0
         error("No camera commands were found")
     end
@@ -136,7 +136,7 @@ function check_sufficiency(coms::Vector{ImagineCommand})
 end
 
 #Check whether user has modified fixed names
-function check_fixed_names(coms::Vector{ImagineCommand}, rig::String)
+function check_fixed_names(coms::Vector{ImagineSignal}, rig::String)
     fixed_names = FIXED_NAMES[rig]
     name_lookup = DEFAULT_DAQCHANS_TO_NAMES[rig]
     for c in coms
@@ -150,7 +150,7 @@ function check_fixed_names(coms::Vector{ImagineCommand}, rig::String)
 end
 
 #checks that all commands in the vector have the same rig, and the rig is recognized
-function check_rig_names(coms::Vector{ImagineCommand})
+function check_rig_names(coms::Vector{ImagineSignal})
     rig = rig_name(coms[1])
     if !all(map(rig_name, coms) .== rig)
         error("The set of commands to be written must all be targeted to the same rig")
@@ -162,7 +162,7 @@ function check_rig_names(coms::Vector{ImagineCommand})
 end
 
 #Check for invalid DAQ channel names
-function check_valid_channels(coms::Vector{ImagineCommand}, rig::String)
+function check_valid_channels(coms::Vector{ImagineSignal}, rig::String)
     name_lookup = DEFAULT_DAQCHANS_TO_NAMES[rig]
     for c in map(daq_channel, coms)
         if !haskey(name_lookup, c)
@@ -192,7 +192,7 @@ function get_missing_monitors(coms_used)
     return output
 end
 
-function write_commands(fname::String, coms::Vector{ImagineCommand}, nstacks::Int, nframes::Int, exp_time::HasTimeUnits; isbidi::Bool=false)
+function write_commands(fname::String, coms::Vector{ImagineSignal}, nstacks::Int, nframes::Int, exp_time::HasTimeUnits; isbidi::Bool=false)
     @assert splitext(fname)[2] == ".json"
     isused = map(x-> !isoutput(x) || !isempty(x), coms)
     coms_used = coms[isused]

@@ -10,18 +10,18 @@ sample_rate = 50000s^-1 #analog output samples per second
 @show ImagineInterface.RIGS #show supported rigs                                
 rig = "ocpi-2"
 ocpi2 = rigtemplate(rig; sample_rate = sample_rate)
-@show ocpi2 #This is a vector where each element is an empty ImagineCommand
+@show ocpi2 #This is a vector where each element is an empty ImagineSignal
 #We can edit commands individually by extracting them from this array.
 #Note however that after you finish editing and are ready to write a command file, all commands must have an equal number of samples (or remain empty)
 
 #Let's look at a positioner trace
 positioners = getpositioners(ocpi2)
 pos = positioners[1]
-#"pos" is an ImagineCommand.  We can append sequences of samples to the (currently empty) command.
+#"pos" is an ImagineSignal.  We can append sequences of samples to the (currently empty) signal to use as a command for Imagine.
 #We can append vectors of raw samples, voltage units (since this is an analog output device), or world units.
 #If you're not sure what type os samples you can append, or what ranges of values are allowed, you can check with this command
 @show intervals(pos) #this signal has 3 (equivalent) representations, one uses raw sample units, one uses Voltage units, and the other uses Length units
-#While you can append vectors using any of the 3 representations, in practice it's most intuitive to use "world" units (μm for the positioner)  when interacting with ImagineCommands
+#While you can append vectors using any of the 3 representations, in practice it's most intuitive to use "world" units (μm for the positioner)  when interacting with ImagineSignals
 
 #You can also query the intervals individually
 @show interval_raw(pos)
@@ -38,15 +38,14 @@ append!(pos, "sweep_up", sweep_up)
 #Repeated sequences cost almost zero additional storage space.
 #In order to retrieve the sequence again, you must decompress it.
 #You can decompress using its key, in this case "sweep_up":
-sweep_up2 = decompress(pos, "sweep_up") #now sweep_up == sweep_up2
+sweep_up2 = get_samples(pos, "sweep_up") #now sweep_up == sweep_up2
 #Or you can use sample indices
-some_samps = decompress(pos, 50, 100)
+some_samps = get_samples(pos, 50, 100)
 #OR you can use time
-more_samps = decompress(pos, 0.1s, 0.13s)
+more_samps = get_samples(pos, 0.1s, 0.13s)
 
 #You can also remove the last set of samples appended to the list like this:
 pop!(pos)
-#For more details about interacting with ImagineCommands see other example scripts
 #This package provides easier-to-use functions to get commonly used sequences of samples.
 #Currently you can generate an entire stack of positioner, camera, and laser pulse signals in the fashion shown below
 

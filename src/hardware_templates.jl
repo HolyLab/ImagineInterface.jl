@@ -40,12 +40,12 @@ const generic_ao_range = Dict("ocpi-1"=>-10.0V .. 10.0V,
 const generic_ai_range = generic_ao_range #TODO: make sure this is true.  (true if we are recording -10..10V on analog inputs)
 
 
-#returns an array of empty ImagineCommands, one for each channel accessible to OCPI2 users
+#returns an array of empty ImagineSignals, one for each channel accessible to OCPI2 users
 function rigtemplate{U}(rig::String; sample_rate::HasInverseTimeUnits{Int,U} = 10000s^-1)
     if !in(rig, RIGS)
         error("Unsupported rig")
     end
-    coms = ImagineCommand[]
+    coms = ImagineSignal[]
     shared_dict = Dict()
     name_lookup = DEFAULT_DAQCHANS_TO_NAMES[rig]
     #analog outputs
@@ -57,14 +57,14 @@ function rigtemplate{U}(rig::String; sample_rate::HasInverseTimeUnits{Int,U} = 1
             ao_sampmapper = generic_ao_samplemapper(generic_ao_range[rig]; rawtype = Int16, sample_rate = sample_rate)
         end
         ao_vectype = RLEVector{rawtype(ao_sampmapper)}
-        push!(coms, ImagineCommand{ao_vectype}(name_lookup[c], c, rig, [], String[], shared_dict, Int[], ao_sampmapper))
+        push!(coms, ImagineSignal{ao_vectype}(name_lookup[c], c, rig, [], String[], shared_dict, Int[], ao_sampmapper))
     end
 
     #digital outputs (includes cameras, lasers, and stimulus channels)
     do_sampmapper = ttl_samplemapper(;sample_rate = sample_rate)
     do_vectype = RLEVector{rawtype(do_sampmapper)}
     for c in DO_CHANS[rig]
-        push!(coms, ImagineCommand{do_vectype}(name_lookup[c], c, rig, [], String[], shared_dict, Int[], do_sampmapper))
+        push!(coms, ImagineSignal{do_vectype}(name_lookup[c], c, rig, [], String[], shared_dict, Int[], do_sampmapper))
     end
 
     #analog inputs
@@ -76,14 +76,14 @@ function rigtemplate{U}(rig::String; sample_rate::HasInverseTimeUnits{Int,U} = 1
             ai_sampmapper = generic_ai_samplemapper(generic_ai_range[rig]; rawtype = Int16, sample_rate = sample_rate)
         end
         ai_vectype = Vector{rawtype(ai_sampmapper)}
-        push!(coms, ImagineCommand{ai_vectype}(name_lookup[c], c, rig, [], String[], shared_dict, Int[], ai_sampmapper))
+        push!(coms, ImagineSignal{ai_vectype}(name_lookup[c], c, rig, [], String[], shared_dict, Int[], ai_sampmapper))
     end
 
     #digital inputs (including cameras)
     di_sampmapper = do_sampmapper
     di_vectype = Vector{rawtype(di_sampmapper)}
     for c in DI_CHANS[rig]
-        push!(coms, ImagineCommand{di_vectype}(name_lookup[c], c, rig, [], String[], shared_dict, Int[], di_sampmapper)) #TODO: handle bit-packing (.di file convention)
+        push!(coms, ImagineSignal{di_vectype}(name_lookup[c], c, rig, [], String[], shared_dict, Int[], di_sampmapper)) #TODO: handle bit-packing (.di file convention)
     end
 
     return coms

@@ -19,7 +19,7 @@ for rig_file in readdir("../rigs")
     include(joinpath("../rigs", rig_file))
 end
 include("samplemapper.jl")
-include("imaginecommand.jl")
+include("imaginesignal.jl")
 include("hardware_templates.jl")
 include("convenience.jl")
 include("parse.jl")

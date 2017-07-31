@@ -12,6 +12,8 @@ end
 
 raw2volts{Traw,TW}(mapper::SampleMapper{Traw,TW}) = x::Traw -> mapper.voltmin + ((Int(x)-mapper.rawmin)/(Int(mapper.rawmax)-mapper.rawmin))*(mapper.voltmax-mapper.voltmin)
 volts2world{Traw,TW}(mapper::SampleMapper{Traw,TW}) = x::HasVoltageUnits -> convert(TW, mapper.worldmin + ((x-mapper.voltmin)/(mapper.voltmax-mapper.voltmin))*(mapper.worldmax-mapper.worldmin))
+#A specialized version for mapping digital voltages encoded in analog channels
+volts2world{Traw<:Integer,TW<:Bool}(mapper::SampleMapper{Traw,TW}) = x::HasVoltageUnits -> convert(TW, (x-mapper.voltmin)/(mapper.voltmax-mapper.voltmin)>0.5 ? true : false)
 world2volts{Traw,TW}(mapper::SampleMapper{Traw,TW}) = x::TW -> mapper.voltmin + ((x-mapper.worldmin)/(mapper.worldmax-mapper.worldmin))*(mapper.voltmax-mapper.voltmin)
 
 function volts2raw{Traw,TW}(mapper::SampleMapper{Traw,TW})

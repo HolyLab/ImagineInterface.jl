@@ -88,7 +88,7 @@ for c in angs
 end
 
 #write
-outname = "test.json"
+outname = splitext(tempname())[1] *".json"
 exp_time = d[METADATA_KEY]["exposure time in seconds"] * Unitful.s
 write_commands(outname, allcoms, nstacks, nframes, exp_time; isbidi = false)
 allcoms2 = parse_commands(outname)

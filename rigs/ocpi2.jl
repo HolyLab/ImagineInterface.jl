@@ -1,4 +1,5 @@
-push!(RIGS, "ocpi-2")
+rig_key = "ocpi-2"
+push!(RIGS, rig_key)
 
 const ocpi2_mappings = Dict("AO0"=>"axial piezo",
                       "AO1"=>"horizontal piezo",
@@ -69,34 +70,38 @@ const ocpi2_mappings = Dict("AO0"=>"axial piezo",
                       "P0.30"=>"diginput5",
                       "P0.31"=>"diginput6",)
 
-DEFAULT_DAQCHANS_TO_NAMES["ocpi-2"] = ocpi2_mappings
-DEFAULT_NAMES_TO_DAQCHANS["ocpi-2"] = map(reverse, ocpi2_mappings)
+DEFAULT_DAQCHANS_TO_NAMES[rig_key] = ocpi2_mappings
+DEFAULT_NAMES_TO_DAQCHANS[rig_key] = map(reverse, ocpi2_mappings)
 
 const ocpi2_aochans = map(x->"AO$(x)", 0:3) 
 const ocpi2_aichans = map(x->"AI$(x)", 0:31)
 const ocpi2_dochans = map(x->"P0.$(x)", vcat([0:6...], [8:23...])) 
 const ocpi2_dichans = map(x->"P0.$(x)", 24:31)
-const ocpi2_pos_ctrl_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-2"][x], ["axial piezo"; "horizontal piezo"])
-const ocpi2_pos_mon_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-2"][x], ["axial piezo monitor"; "horizontal piezo monitor"])
-const ocpi2_cam_ctrl_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-2"][x], ["camera1"; "camera2"])
-const ocpi2_cam_mon_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-2"][x], ["camera1 frame monitor"; "camera2 frame monitor"])
-const ocpi2_laschans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-2"][x], ["405nm laser"; "445nm laser"; "488nm laser"; "514nm laser"; "561nm laser"; "all lasers"])
-const ocpi2_stimchans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-2"][x], ["stimulus$x" for x = 1:15])
+const ocpi2_pos_ctrl_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["axial piezo"; "horizontal piezo"])
+const ocpi2_pos_mon_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["axial piezo monitor"; "horizontal piezo monitor"])
+const ocpi2_cam_ctrl_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["camera1"; "camera2"])
+const ocpi2_cam_mon_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["camera1 frame monitor"; "camera2 frame monitor"])
+const ocpi2_laschans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["405nm laser"; "445nm laser"; "488nm laser"; "514nm laser"; "561nm laser"; "all lasers"])
+const ocpi2_stimchans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["stimulus$x" for x = 1:15])
 const ocpi2_fixed_names = ["axial piezo", "axial piezo monitor", "horizontal piezo", "horizontal piezo monitor", "camera1", "camera1 frame monitor", "camera2", "camera2 frame monitor", "405nm laser", "445nm laser", "488nm laser", "514nm laser", "561nm laser"]
-const ocpi2_fixed_daqchans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-2"][x], ocpi2_fixed_names)
+const ocpi2_fixed_daqchans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ocpi2_fixed_names)
 
-AO_CHANS["ocpi-2"] = OrderedSet(ocpi2_aochans)
-AI_CHANS["ocpi-2"] = OrderedSet(ocpi2_aichans)
-DO_CHANS["ocpi-2"] = OrderedSet(ocpi2_dochans)
-DI_CHANS["ocpi-2"] = OrderedSet(ocpi2_dichans)
-POS_CONTROL_CHANS["ocpi-2"] = ocpi2_pos_ctrl_chans
-POS_MONITOR_CHANS["ocpi-2"] = ocpi2_pos_mon_chans
-CAM_CONTROL_CHANS["ocpi-2"] = ocpi2_cam_ctrl_chans
-CAM_MONITOR_CHANS["ocpi-2"] = ocpi2_cam_mon_chans
-LAS_CONTROL_CHANS["ocpi-2"] = ocpi2_laschans
-STIM_CHANS["ocpi-2"] =OrderedSet(ocpi2_stimchans)
-FIXED_NAMES["ocpi-2"] = ocpi2_fixed_names
-FIXED_DAQ_CHANS["ocpi-2"] = ocpi2_fixed_daqchans
+AO_CHANS[rig_key] = OrderedSet(ocpi2_aochans)
+AI_CHANS[rig_key] = OrderedSet(ocpi2_aichans)
+DO_CHANS[rig_key] = OrderedSet(ocpi2_dochans)
+DI_CHANS[rig_key] = OrderedSet(ocpi2_dichans)
+POS_CONTROL_CHANS[rig_key] = ocpi2_pos_ctrl_chans
+POS_MONITOR_CHANS[rig_key] = ocpi2_pos_mon_chans
+CAM_CONTROL_CHANS[rig_key] = ocpi2_cam_ctrl_chans
+CAM_MONITOR_CHANS[rig_key] = ocpi2_cam_mon_chans
+LAS_CONTROL_CHANS[rig_key] = ocpi2_laschans
+STIM_CHANS[rig_key] =OrderedSet(ocpi2_stimchans)
+FIXED_NAMES[rig_key] = ocpi2_fixed_names
+FIXED_DAQ_CHANS[rig_key] = ocpi2_fixed_daqchans
 
-RIG_CHIP_SIZES["ocpi-2"] = PCO_EDGE_4_2_CHIP_SIZE
-RIG_FRAMERATE_FUNCS["ocpi-2"] = PCO_EDGE_4_2_FRAMERATE_FUNC
+RIG_CHIP_SIZES[rig_key] = PCO_EDGE_4_2_CHIP_SIZE
+RIG_FRAMERATE_FUNCS[rig_key] = PCO_EDGE_4_2_FRAMERATE_FUNC
+
+PIEZO_RANGES[rig_key] = (0.0μm .. 800.0μm, 0.0V .. 10.0V)
+AO_RANGE[rig_key] = -10.0V .. 10.0V
+AI_RANGE[rig_key] = AO_RANGE[rig_key] #TODO: make sure this is true.  (true if we are recording -10..10V on analog inputs)

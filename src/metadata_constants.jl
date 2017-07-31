@@ -42,6 +42,11 @@ const FIXED_DAQ_CHANS = Dict()
 const RIG_CHIP_SIZES = Dict()
 #functions for calculating frame rate given two arguments: horizontal ROI size and vertical ROI size (in pixels)
 const RIG_FRAMERATE_FUNCS = Dict()
+#voltage ranges of analog channels
+const AO_RANGE = Dict()
+const AI_RANGE = Dict()
+#Tuple of intervals describing the distance range and voltage range of the piezo for each rig
+const PIEZO_RANGES = Dict()
 
 #Utility functions for querying rig channel information
 daq_channel_number(ch::String) = parse(Int, last(split("AO0", ['.', 'I', 'O'])))

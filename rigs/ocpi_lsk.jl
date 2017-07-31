@@ -1,4 +1,5 @@
-push!(RIGS, "ocpi-lsk")
+rig_key = "ocpi-lsk"
+push!(RIGS, rig_key)
 
 #Much like OCPI2, but with missing channels for missing hardware
 const ocpi_lsk_mappings = Dict("AO0"=>"axial piezo",
@@ -70,35 +71,39 @@ const ocpi_lsk_mappings = Dict("AO0"=>"axial piezo",
                       "P0.30"=>"diginput5",
                       "P0.31"=>"diginput6",)
 
-DEFAULT_DAQCHANS_TO_NAMES["ocpi-lsk"] = ocpi_lsk_mappings
-DEFAULT_NAMES_TO_DAQCHANS["ocpi-lsk"] = map(reverse, ocpi_lsk_mappings)
+DEFAULT_DAQCHANS_TO_NAMES[rig_key] = ocpi_lsk_mappings
+DEFAULT_NAMES_TO_DAQCHANS[rig_key] = map(reverse, ocpi_lsk_mappings)
 
-const ocpi_lsk_pos_ctrl_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-lsk"][x], ["axial piezo"])
+const ocpi_lsk_pos_ctrl_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["axial piezo"])
 const ocpi_lsk_aochans = map(x->"AO$(x)", [0;2;3]) 
 const ocpi_lsk_aichans = map(x->"AI$(x)", vcat([0;], [2:15...])) #currently AI1 is unused 
 const ocpi_lsk_dochans = map(x->"P0.$(x)", vcat([0:5...], [13:23...])) 
 const ocpi_lsk_dichans = map(x->"P0.$(x)", vcat([24;], [26:31...]))
-const ocpi_lsk_pos_mon_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-lsk"][x], ["axial piezo monitor"])
-const ocpi_lsk_cam_ctrl_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-lsk"][x], ["camera1"])
-const ocpi_lsk_cam_mon_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-lsk"][x], ["camera1 frame monitor"])
-const ocpi_lsk_laschans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-lsk"][x], ["all lasers"])
-const ocpi_lsk_stimchans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-lsk"][x], ["stimulus$x" for x = 1:15])
+const ocpi_lsk_pos_mon_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["axial piezo monitor"])
+const ocpi_lsk_cam_ctrl_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["camera1"])
+const ocpi_lsk_cam_mon_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["camera1 frame monitor"])
+const ocpi_lsk_laschans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["all lasers"])
+const ocpi_lsk_stimchans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["stimulus$x" for x = 1:15])
 const ocpi_lsk_fixed_names = ["axial piezo", "axial piezo monitor", "all lasers", "camera1", "camera1 frame monitor"]
-const ocpi_lsk_fixed_daqchans = map(x->DEFAULT_NAMES_TO_DAQCHANS["ocpi-lsk"][x], ocpi_lsk_fixed_names)
+const ocpi_lsk_fixed_daqchans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ocpi_lsk_fixed_names)
 
-AO_CHANS["ocpi-lsk"] = OrderedSet(ocpi_lsk_aochans)
-AI_CHANS["ocpi-lsk"] = OrderedSet(ocpi_lsk_aichans)
-DO_CHANS["ocpi-lsk"] = OrderedSet(ocpi_lsk_dochans)
-DI_CHANS["ocpi-lsk"] = OrderedSet(ocpi_lsk_dichans)
-POS_CONTROL_CHANS["ocpi-lsk"] = ocpi_lsk_pos_ctrl_chans
-POS_MONITOR_CHANS["ocpi-lsk"] = ocpi_lsk_pos_mon_chans
-CAM_CONTROL_CHANS["ocpi-lsk"] = ocpi_lsk_cam_ctrl_chans
-CAM_MONITOR_CHANS["ocpi-lsk"] = ocpi_lsk_cam_mon_chans
-LAS_CONTROL_CHANS["ocpi-lsk"] = ocpi_lsk_laschans
-STIM_CHANS["ocpi-lsk"] =OrderedSet(ocpi_lsk_stimchans)
-FIXED_NAMES["ocpi-lsk"] = ocpi_lsk_fixed_names
-FIXED_DAQ_CHANS["ocpi-lsk"] = ocpi_lsk_fixed_daqchans
+AO_CHANS[rig_key] = OrderedSet(ocpi_lsk_aochans)
+AI_CHANS[rig_key] = OrderedSet(ocpi_lsk_aichans)
+DO_CHANS[rig_key] = OrderedSet(ocpi_lsk_dochans)
+DI_CHANS[rig_key] = OrderedSet(ocpi_lsk_dichans)
+POS_CONTROL_CHANS[rig_key] = ocpi_lsk_pos_ctrl_chans
+POS_MONITOR_CHANS[rig_key] = ocpi_lsk_pos_mon_chans
+CAM_CONTROL_CHANS[rig_key] = ocpi_lsk_cam_ctrl_chans
+CAM_MONITOR_CHANS[rig_key] = ocpi_lsk_cam_mon_chans
+LAS_CONTROL_CHANS[rig_key] = ocpi_lsk_laschans
+STIM_CHANS[rig_key] =OrderedSet(ocpi_lsk_stimchans)
+FIXED_NAMES[rig_key] = ocpi_lsk_fixed_names
+FIXED_DAQ_CHANS[rig_key] = ocpi_lsk_fixed_daqchans
 
 #TODO: check these
-#RIG_CHIP_SIZES["ocpi-lsk"] = PCO_EDGE_5_5_CHIP_SIZE
-#RIG_FRAMERATE_FUNCS["ocpi-lsk"] = PCO_EDGE_5_5_FRAMERATE_FUNC
+#RIG_CHIP_SIZES[rig_key] = PCO_EDGE_5_5_CHIP_SIZE
+#RIG_FRAMERATE_FUNCS[rig_key] = PCO_EDGE_5_5_FRAMERATE_FUNC
+
+PIEZO_RANGES[rig_key] = (0.0μm .. 400.0μm, 0.0V .. 10.0V)
+AO_RANGE[rig_key] = -10.0V .. 10.0V
+AI_RANGE[rig_key] = AO_RANGE[rig_key] #TODO: make sure this is true.  (true if we are recording -10..10V on analog inputs)

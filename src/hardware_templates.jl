@@ -4,7 +4,7 @@ function default_samplemapper(rig_name::String, daq_chan_name::String; sample_ra
     if isdigital(daq_chan_name, rig_name)
         return ttl_samplemapper(; sample_rate = sample_rate)
     elseif ispos(daq_chan_name, rig_name) || isposmonitor(daq_chan_name, rig_name)
-        return piezo_samplemapper(default_piezo_ranges[rig_name]...; rawtype = Int16, sample_rate = sample_rate)
+        return piezo_samplemapper(PIEZO_RANGES[rig_name]...; rawtype = Int16, sample_rate = sample_rate)
     elseif isanalog(daq_chan_name, rig_name)
         if isoutput(daq_chan_name, rig_name)
             return generic_ao_samplemapper(-10.0V..10.0V; rawtype = Int16, sample_rate = sample_rate)
@@ -26,19 +26,11 @@ function piezo_samplemapper{TL<:HasLengthUnits,TV<:HasVoltageUnits, TU}(p::Abstr
     return SampleMapper(zero(rawtype), typemax(rawtype), minimum(v), maximum(v), minimum(p), maximum(p), sample_rate)
 end
 
-#Shortcut for creating a generic digital TTL SampleMapper, assumes TTL level of 3.3V (though this doesn't matter to Imagine, only for visualizing in Julia)
-function ttl_samplemapper{U}(; sample_rate::HasInverseTimeUnits{Int, U}=10000s^-1)
-    return SampleMapper(UInt8(false), UInt8(true), 0.0*Unitful.V, 3.3*Unitful.V, false, true, sample_rate)
+#Shortcut for creating a generic TTL SampleMapper, assumes TTL level of 3.3V (though this doesn't matter to Imagine, only for visualizing in Julia)
+#By default the raw samples are true/false values encoded as UInt8.  If using an analog channel for TTL signals these default limits should be changed
+function ttl_samplemapper{U}(rawmin=UInt8(false), rawmax=(UInt8(true)); sample_rate::HasInverseTimeUnits{Int, U}=10000s^-1)
+    return SampleMapper(rawmin, rawmax, 0.0*Unitful.V, 3.3*Unitful.V, false, true, sample_rate)
 end
-
-const default_piezo_ranges = Dict("ocpi-1"=>(0.0μm .. 400.0μm, 0.0V .. 10.0V),
-                                  "ocpi-2"=>(0.0μm .. 800.0μm, 0.0V .. 10.0V),
-                                  "ocpi-lsk"=>(0.0μm .. 400.0μm, 0.0V .. 10.0V))
-const generic_ao_range = Dict("ocpi-1"=>-10.0V .. 10.0V,
-                                  "ocpi-2"=>-10.0V .. 10.0V,
-                                  "ocpi-lsk"=>-10.0V .. 10.0V)
-const generic_ai_range = generic_ao_range #TODO: make sure this is true.  (true if we are recording -10..10V on analog inputs)
-
 
 #returns an array of empty ImagineSignals, one for each channel accessible to OCPI2 users
 function rigtemplate{U}(rig::String; sample_rate::HasInverseTimeUnits{Int,U} = 10000s^-1)
@@ -52,9 +44,11 @@ function rigtemplate{U}(rig::String; sample_rate::HasInverseTimeUnits{Int,U} = 1
     ao_sampmapper = 0
     for c in AO_CHANS[rig]
         if ispos(c, rig)
-            ao_sampmapper = piezo_samplemapper(default_piezo_ranges[rig]...; rawtype = Int16, sample_rate = sample_rate)
+            ao_sampmapper = piezo_samplemapper(PIEZO_RANGES[rig]...; rawtype = Int16, sample_rate = sample_rate)
+        elseif iscam(c, rig) #if using an AO channel to control cameras (not advised, mostly for testing)
+            ao_sampmapper = ttl_samplemapper(zero(Int16), ceil(Int16, typemax(Int16)*3.3/10.0); sample_rate = sample_rate)
         else
-            ao_sampmapper = generic_ao_samplemapper(generic_ao_range[rig]; rawtype = Int16, sample_rate = sample_rate)
+            ao_sampmapper = generic_ao_samplemapper(AO_RANGE[rig]; rawtype = Int16, sample_rate = sample_rate)
         end
         ao_vectype = RLEVector{rawtype(ao_sampmapper)}
         push!(coms, ImagineSignal{ao_vectype}(name_lookup[c], c, rig, [], String[], shared_dict, Int[], ao_sampmapper))
@@ -71,9 +65,11 @@ function rigtemplate{U}(rig::String; sample_rate::HasInverseTimeUnits{Int,U} = 1
     ai_sampmapper = 0
     for c in AI_CHANS[rig]
         if isposmonitor(c, rig)
-            ai_sampmapper = piezo_samplemapper(default_piezo_ranges[rig]...; rawtype = Int16, sample_rate = sample_rate)
+            ai_sampmapper = piezo_samplemapper(PIEZO_RANGES[rig]...; rawtype = Int16, sample_rate = sample_rate)
+        elseif iscammonitor(c, rig) #If using an AI channel for TTL camera inputs
+            ai_sampmapper = ttl_samplemapper(zero(Int16), ceil(Int16, typemax(Int16)*3.3/10.0); sample_rate = sample_rate)
         else
-            ai_sampmapper = generic_ai_samplemapper(generic_ai_range[rig]; rawtype = Int16, sample_rate = sample_rate)
+            ai_sampmapper = generic_ai_samplemapper(AI_RANGE[rig]; rawtype = Int16, sample_rate = sample_rate)
         end
         ai_vectype = Vector{rawtype(ai_sampmapper)}
         push!(coms, ImagineSignal{ai_vectype}(name_lookup[c], c, rig, [], String[], shared_dict, Int[], ai_sampmapper))

@@ -161,11 +161,13 @@ function compress{T}(input::AbstractVector{T})
     return compress!(output, input)
 end
 compress(input::RLEVector) = input
-compress{Traw, TW}(seq::AbstractVector{Traw}, mapper::SampleMapper{Traw, TW}) = compress!(RepeatedValue{Traw}[], mappedarray(bounds_check(mapper), seq))
-compress{Traw, TW, TV<:HasVoltageUnits}(seq::AbstractVector{TV}, mapper::SampleMapper{Traw, TW}) = compress!(RepeatedValue{Traw}[], mappedarray(volts2raw(mapper), seq))
-compress{Traw, TW}(seq::AbstractVector{TW}, mapper::SampleMapper{Traw, TW}) = compress!(RepeatedValue{Traw}[], mappedarray(world2raw(mapper), seq))
+compress{Traw, TV, TW}(seq::AbstractVector{Traw}, mapper::SampleMapper{Traw, TV, TW}) = compress!(RepeatedValue{Traw}[], mappedarray(bounds_check(mapper), seq))
+#Digital signals use the same types for raw and world samples, so no need to map them
+compress{Traw, TV}(seq::AbstractVector{Traw}, mapper::SampleMapper{Traw, TV, Traw}) = compress!(RepeatedValue{Traw}[], mappedarray(bounds_check(mapper), seq))
+compress{Traw, TV1, TV2<:HasVoltageUnits, TW}(seq::AbstractVector{TV2}, mapper::SampleMapper{Traw, TV1, TW}) = compress!(RepeatedValue{Traw}[], mappedarray(volts2raw(mapper), seq))
+compress{Traw, TV, TW}(seq::AbstractVector{TW}, mapper::SampleMapper{Traw, TV, TW}) = compress!(RepeatedValue{Traw}[], mappedarray(world2raw(mapper), seq))
 #attempt conversion when Quantity types don't exactly match (Float32 vs Float64 precision, for example)
-compress{Traw, TW, T}(seq::AbstractVector{T}, mapper::SampleMapper{Traw, TW}) = compress(map(x->convert(TW, x), seq), mapper)
+compress{Traw, TV, TW, T}(seq::AbstractVector{T}, mapper::SampleMapper{Traw, TV, TW}) = compress(map(x->convert(TW, x), seq), mapper)
 
 function get_samples(com::ImagineSignal, tstart::HasTimeUnits, tstop::HasTimeUnits; sampmap=:world)
     tstart = uconvert(unit(inv(samprate(com))), tstart)

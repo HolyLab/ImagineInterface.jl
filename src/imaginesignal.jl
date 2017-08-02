@@ -162,6 +162,8 @@ function compress{T}(input::AbstractVector{T})
 end
 compress(input::RLEVector) = input
 compress{Traw, TV, TW}(seq::AbstractVector{Traw}, mapper::SampleMapper{Traw, TV, TW}) = compress!(RepeatedValue{Traw}[], mappedarray(bounds_check(mapper), seq))
+#Digital signals use the same types for raw and world samples, so no need to map them
+compress{Traw, TV}(seq::AbstractVector{Traw}, mapper::SampleMapper{Traw, TV, Traw}) = compress!(RepeatedValue{Traw}[], mappedarray(bounds_check(mapper), seq))
 compress{Traw, TV1, TV2<:HasVoltageUnits, TW}(seq::AbstractVector{TV2}, mapper::SampleMapper{Traw, TV1, TW}) = compress!(RepeatedValue{Traw}[], mappedarray(volts2raw(mapper), seq))
 compress{Traw, TV, TW}(seq::AbstractVector{TW}, mapper::SampleMapper{Traw, TV, TW}) = compress!(RepeatedValue{Traw}[], mappedarray(world2raw(mapper), seq))
 #attempt conversion when Quantity types don't exactly match (Float32 vs Float64 precision, for example)

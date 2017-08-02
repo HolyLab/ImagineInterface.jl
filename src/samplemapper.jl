@@ -1,39 +1,47 @@
 #Functions called on this type return anonymous functions
 #converting between analog-to-digital converter bits, voltage, and world units
-type SampleMapper{Traw,TW}
+type SampleMapper{Traw, TV, TW}
     rawmin::Traw
     rawmax::Traw
-    voltmin::HasVoltageUnits
-    voltmax::HasVoltageUnits
+    voltmin::TV
+    voltmax::TV
     worldmin::TW
     worldmax::TW
     samprate::HasInverseTimeUnits
 end
 
-raw2volts{Traw,TW}(mapper::SampleMapper{Traw,TW}) = x::Traw -> mapper.voltmin + ((Int(x)-mapper.rawmin)/(Int(mapper.rawmax)-mapper.rawmin))*(mapper.voltmax-mapper.voltmin)
-volts2world{Traw,TW}(mapper::SampleMapper{Traw,TW}) = x::HasVoltageUnits -> convert(TW, mapper.worldmin + ((x-mapper.voltmin)/(mapper.voltmax-mapper.voltmin))*(mapper.worldmax-mapper.worldmin))
+raw2volts{Traw, TV, TW}(mapper::SampleMapper{Traw, TV, TW}) = x::Traw -> mapper.voltmin + ((Int(x)-mapper.rawmin)/(Int(mapper.rawmax)-mapper.rawmin))*(mapper.voltmax-mapper.voltmin)
+volts2world{Traw, TV, TW}(mapper::SampleMapper{Traw, TV, TW}) = x::HasVoltageUnits -> convert(TW, mapper.worldmin + ((x-mapper.voltmin)/(mapper.voltmax-mapper.voltmin))*(mapper.worldmax-mapper.worldmin))
 #A specialized version for mapping digital voltages encoded in analog channels
-volts2world{Traw<:Integer,TW<:Bool}(mapper::SampleMapper{Traw,TW}) = x::HasVoltageUnits -> convert(TW, (x-mapper.voltmin)/(mapper.voltmax-mapper.voltmin)>0.5 ? true : false)
-world2volts{Traw,TW}(mapper::SampleMapper{Traw,TW}) = x::TW -> mapper.voltmin + ((x-mapper.worldmin)/(mapper.worldmax-mapper.worldmin))*(mapper.voltmax-mapper.voltmin)
+volts2world{Traw<:Integer, TV, TW<:Bool}(mapper::SampleMapper{Traw, TV, TW}) = x::HasVoltageUnits -> convert(TW, (x-mapper.voltmin)/(mapper.voltmax-mapper.voltmin)>0.5 ? true : false)
+world2volts{Traw, TV, TW}(mapper::SampleMapper{Traw, TV, TW}) = x::TW -> mapper.voltmin + ((x-mapper.worldmin)/(mapper.worldmax-mapper.worldmin))*(mapper.voltmax-mapper.voltmin)
 
-function volts2raw{Traw,TW}(mapper::SampleMapper{Traw,TW})
+function volts2raw{Traw, TV, TW}(mapper::SampleMapper{Traw, TV, TW})
     bc = bounds_check(mapper)
-    return x::HasVoltageUnits -> bc(round(rawtype(mapper), mapper.rawmin + ((x-mapper.voltmin)/(mapper.voltmax-mapper.voltmin))*(Int(mapper.rawmax)-mapper.rawmin)))
+    return x::HasVoltageUnits -> bc(round(rawtype(mapper), mapper.rawmin + ((uconvert(unit(TV), x)-mapper.voltmin)/(mapper.voltmax-mapper.voltmin))*(Int(mapper.rawmax)-mapper.rawmin)))
 end
 
-function world2raw{Traw,TW}(mapper::SampleMapper{Traw,TW})
+function world2raw{Traw, TV, TW}(mapper::SampleMapper{Traw, TV, TW})
     bc = bounds_check(mapper)
     w2v = world2volts(mapper)
     v2r = volts2raw(mapper)
     return x::TW -> bc(v2r(w2v(x)))
 end
 
-raw2world{Traw,TW}(mapper::SampleMapper{Traw,TW}) = x::Traw -> volts2world(mapper)(raw2volts(mapper)(x))
+raw2world{Traw, TV, TW}(mapper::SampleMapper{Traw, TV, TW}) = x::Traw -> volts2world(mapper)(raw2volts(mapper)(x))
 
-bounds_check{Traw,TW}(mapper::SampleMapper{Traw, TW}) = x::Traw -> (x >= mapper.rawmin && x <= mapper.rawmax) ? x : error("Raw value $x is outside of the valid range")
+function bounds_check{Traw, TV, TW}(mapper::SampleMapper{Traw, TV, TW})
+    x::Traw -> begin
+        if (x >= mapper.rawmin && x <= mapper.rawmax)
+            return x
+        else
+            error("Raw value $x is outside of the valid range")
+        end
+    end
+end
 
-rawtype{Traw,TW}(sm::SampleMapper{Traw, TW}) = Traw
-worldtype{Traw,TW}(sm::SampleMapper{Traw, TW}) = TW
+rawtype{Traw, TV, TW}(sm::SampleMapper{Traw, TV, TW}) = Traw
+worldtype{Traw, TV, TW}(sm::SampleMapper{Traw, TV, TW}) = TW
 
 interval_raw(sm::SampleMapper) = ClosedInterval(sm.rawmin, sm.rawmax)
 interval_volts(sm::SampleMapper) = ClosedInterval(sm.voltmin, sm.voltmax)

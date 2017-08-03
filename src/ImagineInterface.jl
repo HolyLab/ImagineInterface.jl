@@ -42,7 +42,10 @@ export chip_size,
         isstim
 
 #imaginecommand.jl
-export ImagineSignal,
+export RepeatedValue,
+        RLEVector,
+        full_length,
+        ImagineSignal,
         name,
         rename!,
         duration,

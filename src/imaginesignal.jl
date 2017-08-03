@@ -10,6 +10,7 @@ convert{T}(::Type{RepeatedValue{T}}, rv::RepeatedValue) = RepeatedValue{T}(rv.n,
 
 "RLEVector is a run-length encoded vector"
 const RLEVector{T} = Vector{RepeatedValue{T}}
+full_length{T}(vec::RLEVector{T}) = sum(map(count, vec))
 # Use the first "real" value to infer the type. Not type-stable.
 convert(::Type{RLEVector}, v::AbstractVector) = isempty(v) ?
 convert(RLEVector{Any}, v) :
@@ -305,18 +306,21 @@ function append!{T<:RLEVector}(com::ImagineSignal{T}, seqname::String)
 end
 
 function append!{T<:RLEVector, TS}(com::ImagineSignal{T}, seqname::String, sequence::AbstractVector{TS})
+        cseq = compress(sequence, mapper(com))
+        return append!(com, seqname, cseq)
+end
+
+function append!{T<:RLEVector}(com::ImagineSignal{T}, seqname::String, sequence::T)
     seqdict = sequence_lookup(com)
     if haskey(seqdict, seqname)
         error("Sequence name exists.  If you mean to add append another copy of the existing sequence, call `append!(com, seqname)` instead")
     else
-        #compress it, add it to seqdict, append it to the sequence list, and append the name to the name list
-        cseq = compress(sequence, mapper(com))
-        seqdict[seqname] = cseq
-	push!(sequences(com), cseq)
-	push!(sequence_names(com), seqname)
-        push!(cumlength(com), length(com) + length(sequence))
+        seqdict[seqname] = sequence
+        push!(sequences(com), sequence)
+        push!(sequence_names(com), seqname)
+        push!(cumlength(com), length(com) + full_length(sequence))
+        return com
     end
-    return com
 end
 
 #Repeat the entire sequence currently described by com nreps times

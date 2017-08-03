@@ -126,6 +126,16 @@ dat = get_samples(pos, "ramp_up")
 append!(pos, "ramp_up") #append existing
 @test length(pos) == 2*typemax(Int16)+2
 
+#append! already compressed
+stim1 = getstimuli(ocpi2)[1]
+stim2 = getstimuli(ocpi2)[2]
+append!(stim1, "on_100", trues(100))
+rlev = RepeatedValue{rawtype(stim2)}[]
+push!(rlev, RepeatedValue(100, true))
+append!(stim2, "on_100_2", rlev)
+@test length(stim1) == length(stim2)
+@test all(get_samples(stim1) .== get_samples(stim2))
+
 #test invalid sample types
 rawdat = Int32[1:5...]
 @test_throws(Exception, append!(pos, "bad", rawdat))

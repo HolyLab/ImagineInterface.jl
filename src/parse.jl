@@ -34,13 +34,13 @@ function parse_command(d::Dict, comname::String)
 end
 
 #In the JSON arrays, waveforms and counts-of-waves are specified in alternating order: count,wave,count,wave...
-function _parse_command(rig_name::String, chan_name::String, daq_chan_name::String, seqs_compressed::RLEVector, seqs_lookup::Dict, sample_rate::HasInverseTimeUnits)
-    sampmapper = default_samplemapper(rig_name, daq_chan_name; sample_rate = sample_rate)
+function _parse_command(rig::String, chan_name::String, daq_chan_name::String, seqs_compressed::RLEVector, seqs_lookup::Dict, sample_rate::HasInverseTimeUnits)
+    sampmapper = default_samplemapper(rig, daq_chan_name; sample_rate = sample_rate)
     rawtyp = rawtype(sampmapper)
-    vectype = isoutput(daq_chan_name, rig_name) ? RLEVector{rawtyp} : AbstractVector{rawtyp}
+    vectype = isoutput(daq_chan_name, rig) ? RLEVector{rawtyp} : AbstractVector{rawtyp}
     seqlist = Vector{vectype}(0)
     seqnames = String[]
-    if !isoutput(daq_chan_name, rig_name) && !isempty(seqs_compressed)
+    if !isoutput(daq_chan_name, rig) && !isempty(seqs_compressed)
         warn("Found samples written to the .json file for input channel $(chan_name).  Loading anyway, but this probably indicates a problem")
     end
     for s in seqs_compressed
@@ -51,7 +51,7 @@ function _parse_command(rig_name::String, chan_name::String, daq_chan_name::Stri
     end
     cumlen = zeros(Int, length(seqlist))
     calc_cumlength!(cumlen, seqlist)
-    return ImagineSignal{vectype}(chan_name, daq_chan_name, rig_name, seqlist, seqnames, seqs_lookup, cumlen, sampmapper)
+    return ImagineSignal{vectype}(chan_name, daq_chan_name, rig, seqlist, seqnames, seqs_lookup, cumlen, sampmapper)
 end
 
 function parse_ai(ai_name::String; imagine_header = splitext(ai_name)[1]*".imagine")
@@ -63,37 +63,58 @@ function parse_ai(ai_name::String; imagine_header = splitext(ai_name)[1]*".imagi
     end
     hdr = ImagineFormat.parse_header(imagine_header)
     chns = hdr["channel list"] #note: zero-based, need to add a constant for mapping these indices to DAQ channels
-    nchannels = length(chns)
+    chns = map(x-> "AI$(x)", chns)
     labs = split(hdr["label list"], "\$")
     rig = hdr["rig"]
     samp_rate = convert(Int, hdr["scan rate"]) * Unitful.s^-1
-    if nchannels != length(labs)
+    if length(chns) != length(labs)
         error("Invalid .imagine header: The number of channels does not match the number of channel labels")
     end
-    tmp = rigtemplate(rig; sample_rate = samp_rate)
+    parse_ai(ai_name, chns, labs, rig, samp_rate)
+end
+
+function parse_ai(ai_name, chns, labels, rig, sample_rate::HasInverseTimeUnits)
+    nchannels = length(chns)
+    tmp = rigtemplate(rig; sample_rate = sample_rate)
     incoms = getanalog(getinputs(tmp))
     aitype = rawtype(incoms[1])
     nbytes = filesize(ai_name)
     nsamples = convert(Int,nbytes/nchannels/sizeof(aitype))
     f = open(ai_name, "r")
     A = Mmap.mmap(f, Matrix{aitype}, (nchannels,nsamples))
+    parse_ai(A, chns, labels, rig, sample_rate)
+end
+
+function parse_ai(ai_name, chns, rig, sample_rate::HasInverseTimeUnits)
+    labels = map(x->DEFAULT_DAQCHANS_TO_NAMES[rig][x], chns)
+    parse_ai(ai_name, chns, labels, rig, sample_rate)
+end
+
+function parse_ai{T}(A::Matrix{T}, chns, labels, rig, sample_rate::HasInverseTimeUnits)
+    nchannels = size(A,1)
+    tmp = rigtemplate(rig; sample_rate = sample_rate)
+    incoms = getanalog(getinputs(tmp))
     output = ImagineSignal[]
     for i = 1:length(chns)
-        daq_chan_str = "AI$(chns[i])"
-        comi = finddaqchan(incoms, daq_chan_str)
+        comi = finddaqchan(incoms, chns[i])
         if comi == 0
-            warn("DAQ channel $(daq_chan_str) is not an analog input channel for this rig.  Attempting to load it anyway.")
+            warn("DAQ channel $(chns[i]) is not an analog input channel for this rig.  Attempting to load it anyway.")
         end
         com = incoms[comi]
         samps = view(A, i, :)
         vectyp = typeof(samps)
         sampsarr = Array{vectyp}(0)
         push!(sampsarr, samps)
-        lookup_nm = string(hash(daq_chan_str))
-        mon = ImagineSignal{vectyp}(labs[i], daq_chan_str, rig, sampsarr, [lookup_nm;], Dict(lookup_nm=>samps), [length(samps);], mapper(com))
+        lookup_nm = string(hash(chns[i]))
+        mon = ImagineSignal{vectyp}(labels[i], chns[i], rig, sampsarr, [lookup_nm;], Dict(lookup_nm=>samps), [length(samps);], mapper(com))
         push!(output, mon)
     end
     return output
+end
+
+function parse_ai(A::Matrix, chns, rig, sample_rate::HasInverseTimeUnits)
+    labels = map(x->DEFAULT_DAQCHANS_TO_NAMES[rig][x], chns)
+    parse_ai(A, chns, labels, rig, sample_rate)
 end
 
 function parse_di(di_name::String; imagine_header = splitext(di_name)[1]*".imagine", load_unused = false)
@@ -105,40 +126,63 @@ function parse_di(di_name::String; imagine_header = splitext(di_name)[1]*".imagi
     end
     hdr = ImagineFormat.parse_header(imagine_header)
     chns = hdr["di channel list"] #note: zero-based, need to add a constant for mapping these indices to DAQ channels
-    nchannels = length(chns)
+    chns = map(x->"P0.$(x)", chns)
     labs = split(hdr["di label list"], "\$")
     rig = hdr["rig"]
     samp_rate = convert(Int, hdr["di scan rate"]) * Unitful.s^-1
+    nchannels = length(chns)
     if nchannels != length(labs)
         error("Invalid .imagine header: The number of channels does not match the number of channel labels")
     end
-    tmp = rigtemplate(rig; sample_rate = samp_rate)
-    incoms = getdigital(getinputs(tmp))
+    for i = 1:length(chns)
+        biti = findfirst(x->x==parse(Int, split(chns[i], ".")[2]), hdr["di channel list"])
+        if biti != findfirst(x->x==chns[i], DI_CHANS[rig])
+            warn("DI channel list entry #$(biti) found in the .imagine header does not match the expected entry for this rig. Attempting to load anyway, but please report this issue")
+        end
+    end
+    parse_di(di_name, chns, labs, rig, samp_rate::HasInverseTimeUnits; load_unused = load_unused)
+end
+
+#Does not require Imagine file, but allows a loading a subset of the 8 channels based on names
+function parse_di(di_name, chns, labels, rig, sample_rate::HasInverseTimeUnits; load_unused = false)
+    nchannels = length(labels)
+    di_sigs = parse_di(di_name, rig, sample_rate)
+    di_sigs_used = ImagineSignal[]
+    #assign labels to di_sigs
+    for i = 1:length(chns)
+        sig = getdaqchan(di_sigs, chns[i])
+        rename!(sig, String(labels[i]))
+        if labels[i] != "unused"
+            push!(di_sigs_used, sig)
+        end
+    end
+    if load_unused
+        return di_sigs
+    else
+        return di_sigs_used
+    end
+end
+
+#Does not require imagine file, loads all 8 channels
+function parse_di(di_name, rig, sample_rate::HasInverseTimeUnits)
+    insigs = getdigital(getinputs(rigtemplate(rig; sample_rate = sample_rate)))
+    @assert length(insigs) == 8
     nsamples = filesize(di_name) #each sample is one byte
     f = open(di_name, "r")
     A = Mmap.mmap(f, BitArray, (8,nsamples))
     output = ImagineSignal[]
-    for i = 1:length(chns)
-        daq_chan_str = "P0.$(chns[i])"
-        comi = finddaqchan(incoms, daq_chan_str)
-        if comi == 0
-            warn("DAQ channel $(daq_chan_str) is not a digital input channel for this rig.  Attempting to load it anyway.")
-        end
-        com = incoms[comi]
-        biti = findfirst(x->x==chns[i], hdr["di channel list"])
-        if biti != findfirst(x->x==daq_chan_str, DI_CHANS[rig])
-            warn("DI channel list entry #$(biti) found in the .imagine header does not match the expected entry for this rig. Loading anyway, but please report this issue")
-        end
-        if labs[i] != "unused" || load_unused
-            samps = view(A, biti, :)
-            vectyp = typeof(samps)
-            sampsarr = Array{vectyp}(0)
-            push!(sampsarr, samps)
-            lookup_nm = string(hash(daq_chan_str))
-            mpr = SampleMapper(false, true, 0.0*Unitful.V, 3.3*Unitful.V, false, true, samp_rate) #unlike for outputs, the raw type is Bool
-            mon = ImagineSignal{vectyp}(labs[i], daq_chan_str, rig, sampsarr, [lookup_nm;], Dict(lookup_nm=>samps), [length(samps);], mpr)
-            push!(output, mon)
-        end
+    for i = 1:8
+        sig = insigs[i]
+        daq_chan_str = daq_channel(sig)
+        biti = findfirst(x->x==daq_chan_str, DI_CHANS[rig])
+        samps = view(A, biti, :)
+        vectyp = typeof(samps)
+        sampsarr = Array{vectyp}(0)
+        push!(sampsarr, samps)
+        lookup_nm = string(hash(daq_chan_str))
+        mpr = SampleMapper(false, true, 0.0*Unitful.V, 3.3*Unitful.V, false, true, sample_rate) #unlike for outputs, the raw type is Bool
+        mon = ImagineSignal{vectyp}(name(sig), daq_chan_str, rig, sampsarr, [lookup_nm;], Dict(lookup_nm=>samps), [length(samps);], mpr)
+        push!(output, mon)
     end
     return output
 end

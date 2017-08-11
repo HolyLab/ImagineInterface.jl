@@ -15,8 +15,8 @@ nsamps_stack = ceil(Int, stack_time*sample_rate)
 #offset by one sample going forward so that we don't use the end points of the triangle
 delay1samp = 1/sample_rate
 
-exp_intervals_fwd = spaced_intervals(posfwd, z_spacing, exp_time, 1/sample_rate; delay=delay1samp, z_pad = z_pad, alignment=:start)
-exp_intervals_back = spaced_intervals(posback, z_spacing, exp_time, 1/sample_rate; delay=0.0*Unitful.s, z_pad = z_pad, alignment=:stop)
+exp_intervals_fwd = spaced_intervals(posfwd, z_spacing, exp_time, sample_rate; delay=delay1samp, z_pad = z_pad, alignment=:start)
+exp_intervals_back = spaced_intervals(posback, z_spacing, exp_time, sample_rate; delay=0.0*Unitful.s, z_pad = z_pad, alignment=:stop)
 
 las_intervals_fwd = map(x->ImagineInterface.scale(x, flash_frac), exp_intervals_fwd)
 #las_intervals_back = map(x->scale(x, flash_frac), exp_intervals_back)
@@ -27,8 +27,8 @@ samps_las_back = reverse(circshift(samps_las_fwd,-1))
 samps_cam_fwd = gen_pulses(nsamps_stack, exp_intervals_fwd)
 samps_cam_back = gen_pulses(nsamps_stack, exp_intervals_back)
 
-@test all(map(IntervalSets.width, exp_intervals_fwd) .== 550)
-@test all(map(IntervalSets.width, exp_intervals_back) .== 550)
+@test all(map(IntervalSets.width, exp_intervals_fwd) .== 549)
+@test all(map(IntervalSets.width, exp_intervals_back) .== 549)
 #exposure duration
 @test IntervalSets.width(exp_intervals_fwd[1]) / sample_rate ≈ exp_time atol=1 / sample_rate
 #laser duration

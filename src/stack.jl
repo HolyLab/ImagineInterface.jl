@@ -1,12 +1,24 @@
 using Ranges #delete this when we drop 0.5 support
 
+#Use this whenever we need to calculate sample counts so that we are consistent with rounding
+function calc_num_samps(duration::HasTimeUnits, sample_rate::HasInverseTimeUnits; should_warn = true)
+    unrounded = duration * sample_rate
+    rounded = round(Int, unrounded)
+    rounding_err = abs(rounded - unrounded)/unrounded
+    if rounding_err > 0.01
+        warn("The requested duration cannot be achieved to within 1% accuracy with the current sampling rate.  Consider increasing the sampling rate.")
+    end
+    return rounded
+end
+
+
 #The sweep covers an interval that is closed on the left and open on the right.
 #i.e. a sweep from 0 to 10 will include a sample at 0 but not at 10
 function gen_sweep(pmin::HasLengthUnits, pmax::HasLengthUnits, tsweep::HasTimeUnits, sample_rate::HasInverseTimeUnits)
     tsweeps = uconvert(Unitful.s, tsweep)
     pminum = uconvert(Unitful.μm, pmin)
     pmaxum = uconvert(Unitful.μm, pmax)
-    nsamps = round(Int, tsweeps*sample_rate)
+    nsamps = calc_num_samps(tsweep, sample_rate)
     increment = (pmaxum - pminum) / nsamps
     return Ranges.linspace(pminum, pmaxum-increment, nsamps)
 end
@@ -19,37 +31,32 @@ function gen_sawtooth(pmin::HasLengthUnits, pmax::HasLengthUnits, tfwd::HasTimeU
 end
 gen_bidi_pos(pmin::HasLengthUnits, pmax::HasLengthUnits, tsweep::HasTimeUnits, sample_rate::HasInverseTimeUnits) = gen_sawtooth(pmin, pmax, tsweep, tsweep, sample_rate)
 
-#returns a vector of sample-index intervals separated by `interval_spacing`.
+#returns a vector of sample-index intervals with starts separated by `interval_spacing`.
 #The first interval is offset from the first sample of the sampled region by the `offset` keyword arg
-#The `z_pad` kwarg, specified in non-temporal units, will prevent placement of intervals at the extremes of the smaple space
+#The `z_pad` kwarg, specified in non-temporal units, will prevent placement of intervals at the extremes of the sample space
 #The `alignment` kwarg determines whether the first interval begins at the first valid sample (:start) or the last interval ends at the last valid sample (:stop)
 #Thus :start and :stop will produce equal results for certain well-dividing sample counts, but most of the time they are different
-function spaced_intervals{TS, TT}(samples_space::Ranges.LinSpace{TS}, interval_spacing::TS, interval_duration::TT, samp_duration::TT;
+function spaced_intervals{TS<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverseTimeUnits}(samples_space::Ranges.LinSpace{TS}, interval_spacing::TS, interval_duration::TT, sample_rate::TTI;
                                 delay::TT=uconvert(unit(TT), 0.0*Unitful.s), z_pad::TS = uconvert(unit(TS), 1.0*Unitful.μm), alignment=:start)
     if !in(alignment, (:start, :stop))
         error("Only :start and :stop alignment is supported")
     end
-    sampsize = abs(step(samples_space))
-    pad_samps = round(Int, z_pad/sampsize)
-    delay_samps = round(Int, delay/samp_duration)
+    samp_length = abs(step(samples_space))
+    pad_samps = round(Int, z_pad/samp_length)
+    delay_samps = calc_num_samps(delay, sample_rate)
     offset = pad_samps + delay_samps
     nsamps = length(samples_space) - offset - pad_samps
-    dur_samps = interval_duration/samp_duration + 1
-    if abs(dur_samps-round(Int, dur_samps))/dur_samps > 0.01
-        warn("The requested interval_duration cannot be achieved to within 1% accuracy with the current sampling rate.  Consider increasing the sampling rate.")
-    end
-    dur_samps = round(Int, dur_samps)
-    spacing_samps = interval_spacing/sampsize
+    dur_samps = calc_num_samps(interval_duration, sample_rate)
+    spacing_samps = interval_spacing/samp_length
     if abs(spacing_samps-round(Int, spacing_samps))/spacing_samps > 0.01
         warn("The requested spacing cannot be achieved to within 1% accuracy with the current sampling rate.  Consider increasing the sampling rate.")
     end
     spacing_samps = round(Int, spacing_samps)
-    
     if spacing_samps <= dur_samps
-        error("The requested spacing results in overlapping intervals.  Increase interval_spacing, decrease interval_duration, or change sampling rate.")
+        error("The requested stack spacing results in overlapping camera exposure and/or laser pulse intervals.  Increase z-slice spacing, decrease exposure time, or change sampling rate.")
     end
     inter_samps = spacing_samps - dur_samps #number of samples between end of one interval and start of the next
-    if inter_samps < ceil(Int, MINIMUM_EXPOSURE_SEPARATION/samp_duration)
+    if inter_samps < ceil(Int, MINIMUM_EXPOSURE_SEPARATION * sample_rate)
         error("The requested spacing results in intervals which are too close in time for the jitter specification of the camera.  Increase interval_spacing, decrease interval_duration, or change sampling rate")
     end
     cycle_samps = inter_samps + dur_samps #number of samples in one whole cycle
@@ -117,13 +124,13 @@ function gen_bidirectional_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasI
     exp_time = uconvert(Unitful.s, exp_time)
     sample_rate = uconvert(inv(Unitful.s), sample_rate)
 
-    nsamps_stack = ceil(Int, stack_time*sample_rate)
+    nsamps_stack = calc_num_samps(stack_time, sample_rate)
     posfwd, posback = gen_bidi_pos(pmin, pmax, stack_time, sample_rate)
     #offset by one sample going forward so that we don't use the end points of the triangle
     delay1samp = 1/sample_rate
 
-    exp_intervals_fwd = spaced_intervals(posfwd, z_spacing, exp_time, 1/sample_rate; delay=delay1samp, z_pad = z_pad, alignment=:start)
-    exp_intervals_back = spaced_intervals(posback, z_spacing, exp_time, 1/sample_rate; delay=0.0*Unitful.s, z_pad = z_pad, alignment=:stop)
+    exp_intervals_fwd = spaced_intervals(posfwd, z_spacing, exp_time, sample_rate; delay=delay1samp, z_pad = z_pad, alignment=:start)
+    exp_intervals_back = spaced_intervals(posback, z_spacing, exp_time, sample_rate; delay=0.0*Unitful.s, z_pad = z_pad, alignment=:stop)
     
     if flash
         las_intervals_fwd = map(x->scale(x, flash_frac), exp_intervals_fwd)
@@ -172,10 +179,10 @@ function gen_unidirectional_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:Has
     exp_time = uconvert(Unitful.s, exp_time)
     sample_rate = uconvert(inv(Unitful.s), sample_rate)
 
-    nsamps_stack = ceil(Int, stack_time*sample_rate)
+    nsamps_stack = calc_num_samps(stack_time, sample_rate)
     posfwd, posreset = gen_sawtooth(pmin, pmax, stack_time, reset_time, sample_rate)
 
-    exp_intervals = spaced_intervals(posfwd, z_spacing, exp_time, 1/sample_rate; z_pad = z_pad, alignment=:start)
+    exp_intervals = spaced_intervals(posfwd, z_spacing, exp_time, sample_rate; z_pad = z_pad, alignment=:start)
     
     if flash
         las_intervals = map(x->scale(x, flash_frac), exp_intervals)

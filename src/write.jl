@@ -192,17 +192,25 @@ function get_missing_monitors(coms_used)
     return output
 end
 
+function validate_signals(sigs::Vector{ImagineSignal}; check_is_sufficient = true)
+    check_rig_names(sigs)
+    rig = rig_name(first(sigs))
+    check_valid_channels(sigs, rig)
+    check_fixed_names(sigs, rig)
+    if check_is_sufficient
+        check_sufficiency(sigs)
+    end
+    check_samptypes(sigs, rig)
+    #check_speed_limits(coms_used, rig) #TODO: implement this
+    return true
+end
+
 function write_commands(fname::String, coms::Vector{ImagineSignal}, nstacks::Int, nframes::Int, exp_time::HasTimeUnits; isbidi::Bool=false)
     @assert splitext(fname)[2] == ".json"
     isused = map(x-> !isoutput(x) || !isempty(x), coms)
     coms_used = coms[isused]
-    check_rig_names(coms_used)
-    rig = rig_name(coms_used[1])
-    check_valid_channels(coms_used, rig)
-    check_fixed_names(coms_used, rig)
-    check_sufficiency(coms_used)
-    check_samptypes(coms_used, rig)
-    #check_speed_limits(coms_used, rig) #TODO: implement this
+    validate_signals(coms_used)
+    rig = rig_name(first(coms_used))
     seq_lookup = combine_lookups(coms_used)
     mons = get_missing_monitors(coms_used)
     out_dict = initialize_outdict(rig, seq_lookup, nstacks, nframes, exp_time, samprate(coms[1]), length(coms[1]), isbidi)

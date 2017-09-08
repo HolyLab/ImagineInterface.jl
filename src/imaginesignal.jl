@@ -282,11 +282,21 @@ function get_samples_raw{T<:RLEVector}(com::ImagineSignal{T}, istart::Int, istop
     return output
 end
 
+function add_sequence!{T<:RLEVector}(com::ImagineSignal{T}, seqname::String, sequence)
+    seqdict = sequence_lookup(com)
+    if haskey(seqdict, seqname)
+        error("A sequence by this name exists.  If you want to replace the existing sequence, use the replace! function")
+    else
+        seqdict[seqname] = sequence
+    end
+end
+
 function append!{T<:RLEVector}(com::ImagineSignal{T}, seqname::String)
     seqdict = sequence_lookup(com)
     if !haskey(seqdict, seqname)
-        error("The requested sequence name was not found.  To add a new sequence by this name, use `append!(com, seqname, sequence)`")
+        error("The requested sequence name was not found.  You most first add the sequence with add_sequence!(com, seqname, sequence), or instead you can add it and append it at the same time with append!(com, seqname, sequence)")
     else
+        #TODO: run safety checks here
         #find the length of this sequence and append to cumlength vector
         seqi = findfirst(x->x==seqname, sequence_names(com))
 	push!(sequence_names(com), seqname)
@@ -311,21 +321,18 @@ function append!{T<:RLEVector, TS}(com::ImagineSignal{T}, seqname::String, seque
 end
 
 function append!{T<:RLEVector}(com::ImagineSignal{T}, seqname::String, sequence::T)
-    seqdict = sequence_lookup(com)
-    if haskey(seqdict, seqname)
-        error("Sequence name exists.  If you mean to add append another copy of the existing sequence, call `append!(com, seqname)` instead")
-    else
-        seqdict[seqname] = sequence
-        push!(sequences(com), sequence)
-        push!(sequence_names(com), seqname)
-        push!(cumlength(com), length(com) + full_length(sequence))
-        return com
-    end
+    #TODO: run safety checks here
+    add_sequence!(com, seqname, sequence)
+    push!(sequences(com), sequence)
+    push!(sequence_names(com), seqname)
+    push!(cumlength(com), length(com) + full_length(sequence))
+    return com
 end
 
 #Repeat the entire sequence currently described by com nreps times
 #(Equivalent to calling append!(com, seqname) nreps times when seqname is the only sequence in com)
 function replicate!{T<:RLEVector}(com::ImagineSignal{T}, nreps::Int)
+    #TODO: run safety checks here
     names_to_append = deepcopy(sequence_names(com))
     for n = 1:nreps
         for nm in names_to_append
@@ -357,6 +364,7 @@ function replace!{T<:RLEVector, TS}(com::ImagineSignal{T}, seqname::String, sequ
     if !haskey(seqdict, seqname)
         error("The requested sequence name was not found.  To add a new sequence by this name, use `append!(com, seqname, sequence)`")
     else
+        #TODO: run safety checks here
         cseq = compress(sequence, mapper(com))
         seqdict[seqname] = cseq
         seqidxs = find(x->x==seqname, sequence_names(com))

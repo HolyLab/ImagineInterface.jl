@@ -63,6 +63,7 @@ export RepeatedValue,
 	sequence_lookup,
         mapper,
         get_samples,
+        add_sequence!,
         replace!,
         replicate!
 

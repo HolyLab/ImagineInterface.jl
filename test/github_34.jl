@@ -16,4 +16,4 @@ frac_realscan=z_spacing*n_stk_frames/(pmax-pmin) # fraction of "meaningful scan"
 exp_time=(t_imstk*frac_realscan)/n_stk_frames*0.90
 flash_frac=2
 stk = gen_unidirectional_stack(pmin, pmax, z_spacing, t_imstk, reset_time, exp_time, sample_rate, flash_frac; z_pad = z_pad)
-@test size(stk["positioner"]) == size(stk["camera"]) == @show size(stk["laser"])
+@test size(stk["positioner"]) == size(stk["camera"]) == size(stk["laser"])

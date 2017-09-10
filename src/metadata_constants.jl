@@ -85,7 +85,7 @@ end
 #TODO: abstract camera, move the below stuff to separate files.
 const PCO_EDGE_5_5_CHIP_SIZE = (2560, 2160)
 const PCO_EDGE_4_2_CHIP_SIZE = (2060, 2048) #We use the (older) CameraLink version (without the new sensor)
-const PCO_EDGE_5_5_FRAMERATE_FUNC = x::Tuple{Int,Int} -> 100 * 2^(log(2, 2048/x[2]))
-const PCO_EDGE_4_2_FRAMERATE_FUNC = x::Tuple{Int,Int} -> 100 * 2^(log(2, 2048/x[2]))
+const PCO_EDGE_5_5_FRAMERATE_FUNC = x::Tuple{Int,Int} -> max(100 * 2^(log(2, 2048/x[2])), 100.0)
+const PCO_EDGE_4_2_FRAMERATE_FUNC = x::Tuple{Int,Int} -> max(100 * 2^(log(2, 2048/x[2])), 100.0)
 #const EXPOSURE_TRIGGER_DELAY = 0.0 * Unitful.ns #This is trivially short.  See measurements posted in ImagineInterface issue #18 
 const MINIMUM_EXPOSURE_SEPARATION = 19526.0 * Unitful.ns #This is the worst jitter measured with Edge 5.5 and 4.2 cameras, see ImagineInterface issue #18

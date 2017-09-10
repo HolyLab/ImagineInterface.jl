@@ -47,6 +47,12 @@ const AO_RANGE = Dict()
 const AI_RANGE = Dict()
 #Tuple of intervals describing the distance range and voltage range of the piezo for each rig
 const PIEZO_RANGES = Dict()
+#Unitful quantities (um / s) describing maximum allowed speed of piezo
+const PIEZO_MAX_SPEED = Dict()
+#Unitful quantities (s) describing minimum time for laser to switch from off to on
+const LASER_ON_TIME = Dict()
+#Unitful quantities (s) describing minimum time for laser to switch from on to off
+const LASER_OFF_TIME = Dict()
 
 #Utility functions for querying rig channel information
 daq_channel_number(ch::String) = parse(Int, last(split("AO0", ['.', 'I', 'O'])))

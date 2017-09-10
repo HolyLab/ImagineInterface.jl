@@ -104,6 +104,11 @@ FIXED_DAQ_CHANS[rig_key] = ocpi_lsk_fixed_daqchans
 #RIG_CHIP_SIZES[rig_key] = PCO_EDGE_5_5_CHIP_SIZE
 #RIG_FRAMERATE_FUNCS[rig_key] = PCO_EDGE_5_5_FRAMERATE_FUNC
 
+#TODO: measure these
+LASER_ON_TIME[rig_key] = 100 * Unitful.μs
+LASER_OFF_TIME[rig_key] = 100 * Unitful.μs
+
 PIEZO_RANGES[rig_key] = (0.0μm .. 400.0μm, 0.0V .. 10.0V)
+PIEZO_MAX_SPEED[rig_key] = 2000*Unitful.μm / Unitful.s
 AO_RANGE[rig_key] = -10.0V .. 10.0V
 AI_RANGE[rig_key] = AO_RANGE[rig_key] #TODO: make sure this is true.  (true if we are recording -10..10V on analog inputs)

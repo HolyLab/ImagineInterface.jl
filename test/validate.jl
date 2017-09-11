@@ -1,7 +1,9 @@
 using ImagineInterface
 using Base.Test, IntervalSets
 
-import ImagineInterface: check_max_speed, check_piezo, ValidationState
+import ImagineInterface: check_max_speed, ValidationState, check_piezo, check_piezos
+import ImagineInterface: check_pulse_padding, check_pulse_changetime, check_pulse_interval
+import ImagineInterface: check_camera, check_cameras, check_laser, check_lasers
 
 #check_max_speed
 a = ones(Int16, 10)
@@ -54,3 +56,32 @@ b[1001] = round(eltype(b), ceil(Int, thresh_raw/2) -2)
 replace!(pos, "b", b)
 @test isa(check_piezo(pos; window_sz = win_sz), ValidationState)
 
+#check_piezos
+@test isa(check_piezos(getpositioners(ocpi2); window_sz = win_sz), ValidationState)
+
+#check_pulse_padding
+cam = getcameras(ocpi2)[1]
+c = trues(10)
+append!(cam, "c", c)
+@test_throws Exception check_pulse_padding(cam)
+c[1] = false
+c[end] = false
+replace!(cam, "c", c)
+check_pulse_padding(cam)
+
+#check_pulse_changetime
+#function check_pulse_changetime(start_is::Vector{Int}, stop_is::Vector{Int}, nsamps_on_tol::Int, nsamps_off_tol::Int)
+
+#check_pulse_interval
+#function check_pulse_interval(start_is::Vector{Int}, nsamps_interval_tol::Int)
+
+#check_pulses
+#function check_pulses(sig::ImagineSignal, on_time::HasTimeUnits, off_time::HasTimeUnits, pulse_rate::HasInverseTimeUnits)
+
+#check_camera
+
+#check_cameras
+
+#check_laser
+
+#check_lasers

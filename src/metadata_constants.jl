@@ -53,7 +53,8 @@ const PIEZO_MAX_SPEED = Dict()
 const LASER_ON_TIME = Dict()
 #Unitful quantities (s) describing minimum time for laser to switch from on to off
 const LASER_OFF_TIME = Dict()
-
+const CAMERA_ON_TIME = Dict()
+const CAMERA_OFF_TIME = Dict()
 #Utility functions for querying rig channel information
 daq_channel_number(ch::String) = parse(Int, last(split("AO0", ['.', 'I', 'O'])))
 
@@ -88,4 +89,4 @@ const PCO_EDGE_4_2_CHIP_SIZE = (2060, 2048) #We use the (older) CameraLink versi
 const PCO_EDGE_5_5_FRAMERATE_FUNC = x::Tuple{Int,Int} -> max(100 * 2^(log(2, 2048/x[2])), 100.0)
 const PCO_EDGE_4_2_FRAMERATE_FUNC = x::Tuple{Int,Int} -> max(100 * 2^(log(2, 2048/x[2])), 100.0)
 #const EXPOSURE_TRIGGER_DELAY = 0.0 * Unitful.ns #This is trivially short.  See measurements posted in ImagineInterface issue #18 
-const MINIMUM_EXPOSURE_SEPARATION = 19526.0 * Unitful.ns #This is the worst jitter measured with Edge 5.5 and 4.2 cameras, see ImagineInterface issue #18
+

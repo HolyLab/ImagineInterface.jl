@@ -37,7 +37,7 @@ gen_bidi_pos(pmin::HasLengthUnits, pmax::HasLengthUnits, tsweep::HasTimeUnits, s
 #The `alignment` kwarg determines whether the first interval begins at the first valid sample (:start) or the last interval ends at the last valid sample (:stop)
 #Thus :start and :stop will produce equal results for certain well-dividing sample counts, but most of the time they are different
 function spaced_intervals{TS<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverseTimeUnits}(samples_space::Ranges.LinSpace{TS}, interval_spacing::TS, interval_duration::TT, sample_rate::TTI;
-                                delay::TT=uconvert(unit(TT), 0.0*Unitful.s), z_pad::TS = uconvert(unit(TS), 1.0*Unitful.μm), alignment=:start)
+                                delay::TT=uconvert(unit(TT), 0.0*Unitful.s), z_pad::TS = uconvert(unit(TS), 1.0*Unitful.μm), alignment=:start, rig="ocpi-2")
     if !in(alignment, (:start, :stop))
         error("Only :start and :stop alignment is supported")
     end
@@ -56,7 +56,7 @@ function spaced_intervals{TS<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverseT
         error("The requested stack spacing results in overlapping camera exposure and/or laser pulse intervals.  Increase z-slice spacing, decrease exposure time, or change sampling rate.")
     end
     inter_samps = spacing_samps - dur_samps #number of samples between end of one interval and start of the next
-    if inter_samps < ceil(Int, MINIMUM_EXPOSURE_SEPARATION * sample_rate)
+    if inter_samps < ceil(Int, CAMERA_OFF_TIME[rig] * sample_rate)
         error("The requested spacing results in intervals which are too close in time for the jitter specification of the camera.  Increase interval_spacing, decrease interval_duration, or change sampling rate")
     end
     cycle_samps = inter_samps + dur_samps #number of samples in one whole cycle
@@ -103,7 +103,7 @@ function scale(input::ClosedInterval{Int}, frac::Float64)
     return ClosedInterval(ctr - halfw_new, ctr + halfw_new)
 end
 
-function gen_bidirectional_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverseTimeUnits}(pmin::TL, pmax::TL, z_spacing::TL, stack_time::TT, exp_time::TT, sample_rate::TTI, flash_frac::Real; z_pad::TL = 1.0*Unitful.μm, alternate_cameras = false)
+function gen_bidirectional_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverseTimeUnits}(pmin::TL, pmax::TL, z_spacing::TL, stack_time::TT, exp_time::TT, sample_rate::TTI, flash_frac::Real; z_pad::TL = 1.0*Unitful.μm, alternate_cameras = false, rig="ocpi-2")
     if pmin == pmax
         error("Use the gen_2d_timeseries function instead of setting pmin and pmax to the same value")
     end
@@ -129,8 +129,8 @@ function gen_bidirectional_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasI
     #offset by one sample going forward so that we don't use the end points of the triangle
     delay1samp = 1/sample_rate
 
-    exp_intervals_fwd = spaced_intervals(posfwd, z_spacing, exp_time, sample_rate; delay=delay1samp, z_pad = z_pad, alignment=:start)
-    exp_intervals_back = spaced_intervals(posback, z_spacing, exp_time, sample_rate; delay=0.0*Unitful.s, z_pad = z_pad, alignment=:stop)
+    exp_intervals_fwd = spaced_intervals(posfwd, z_spacing, exp_time, sample_rate; delay=delay1samp, z_pad = z_pad, alignment=:start, rig=rig)
+    exp_intervals_back = spaced_intervals(posback, z_spacing, exp_time, sample_rate; delay=0.0*Unitful.s, z_pad = z_pad, alignment=:stop, rig=rig)
     
     if flash
         las_intervals_fwd = map(x->scale(x, flash_frac), exp_intervals_fwd)
@@ -158,7 +158,7 @@ function gen_bidirectional_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasI
     end
 end
 
-function gen_unidirectional_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverseTimeUnits}(pmin::TL, pmax::TL, z_spacing::TL, stack_time::TT, reset_time::TT, exp_time::TT, sample_rate::TTI, flash_frac::Real; z_pad::TL = 1.0*Unitful.μm)
+function gen_unidirectional_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverseTimeUnits}(pmin::TL, pmax::TL, z_spacing::TL, stack_time::TT, reset_time::TT, exp_time::TT, sample_rate::TTI, flash_frac::Real; z_pad::TL = 1.0*Unitful.μm, rig="ocpi-2")
     if pmin == pmax
         error("Use the gen_2d_timeseries function instead of setting pmin and pmax to the same value")
     end
@@ -182,7 +182,7 @@ function gen_unidirectional_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:Has
     nsamps_stack = calc_num_samps(stack_time, sample_rate)
     posfwd, posreset = gen_sawtooth(pmin, pmax, stack_time, reset_time, sample_rate)
 
-    exp_intervals = spaced_intervals(posfwd, z_spacing, exp_time, sample_rate; z_pad = z_pad, alignment=:start)
+    exp_intervals = spaced_intervals(posfwd, z_spacing, exp_time, sample_rate; z_pad = z_pad, alignment=:start, rig=rig)
     
     if flash
         las_intervals = map(x->scale(x, flash_frac), exp_intervals)

@@ -15,8 +15,8 @@ nsamps_stack = ceil(Int, stack_time*sample_rate)
 #offset by one sample going forward so that we don't use the end points of the triangle
 delay1samp = 1/sample_rate
 
-exp_intervals_fwd = spaced_intervals(posfwd, z_spacing, exp_time, sample_rate; delay=delay1samp, z_pad = z_pad, alignment=:start)
-exp_intervals_back = spaced_intervals(posback, z_spacing, exp_time, sample_rate; delay=0.0*Unitful.s, z_pad = z_pad, alignment=:stop)
+exp_intervals_fwd = spaced_intervals(posfwd, z_spacing, exp_time, sample_rate; delay=delay1samp, z_pad = z_pad, alignment=:start, rig="ocpi-2")
+exp_intervals_back = spaced_intervals(posback, z_spacing, exp_time, sample_rate; delay=0.0*Unitful.s, z_pad = z_pad, alignment=:stop, rig="ocpi-2")
 
 las_intervals_fwd = map(x->ImagineInterface.scale(x, flash_frac), exp_intervals_fwd)
 #las_intervals_back = map(x->scale(x, flash_frac), exp_intervals_back)

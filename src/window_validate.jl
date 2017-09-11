@@ -28,9 +28,6 @@ is_validated(vs::ValidationState, trans_from::String, trans_to::String) = in(tra
 ValidationState() = ValidationState(Set{String}(), Dict{String, Set{String}}())
 
 function window_validate!(vs::ValidationState, val_func::Function, window_sz::Int, sig::ImagineSignal)
-    if length(sig) < window_sz
-        error("Insufficient samples to check this signal with a window size setting of $window_sz")
-    end
     seq_nms = sequence_names(sig)
     lookup = sequence_lookup(sig)
     seq_lens = Dict()

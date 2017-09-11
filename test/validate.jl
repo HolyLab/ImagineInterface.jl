@@ -1,5 +1,5 @@
 using ImagineInterface
-using Base.Test, IntervalSets
+using Base.Test, IntervalSets, Unitful
 
 import ImagineInterface: check_max_speed, ValidationState, check_piezo, check_piezos
 import ImagineInterface: check_pulse_padding, check_pulse_changetime, check_pulse_interval
@@ -69,19 +69,131 @@ c[end] = false
 replace!(cam, "c", c)
 check_pulse_padding(cam)
 
-#check_pulse_changetime
-#function check_pulse_changetime(start_is::Vector{Int}, stop_is::Vector{Int}, nsamps_on_tol::Int, nsamps_off_tol::Int)
+#test pulse validation code camera
+srate = 100000*inv(Unitful.s)
+rig = "ocpi-2"
+ocpirig = rigtemplate(rig; sample_rate = srate)
+function test_seq1(first_i, samps_on, start2start)
+    start_is = Int[first_i; first_i+start2start; first_i + start2start*2; first_i + start2start*3]
+    stop_is = Int[first_i + samps_on-1; first_i+start2start+samps_on-1; first_i+start2start*2+samps_on-1; first_i+start2start*3+samps_on-1]
+    return start_is, stop_is
+end
 
-#check_pulse_interval
-#function check_pulse_interval(start_is::Vector{Int}, nsamps_interval_tol::Int)
+function test_seq2(first_i, samps_off, start2start)
+    samps_on = start2start - samps_off
+    test_seq1(first_i, samps_on, start2start)
+end
 
-#check_pulses
-#function check_pulses(sig::ImagineSignal, on_time::HasTimeUnits, off_time::HasTimeUnits, pulse_rate::HasInverseTimeUnits)
+function gen_samp_seq(start_is, stop_is, tot_length)
+    @assert length(start_is) == length(stop_is)
+    seq = falses(tot_length)
+    for i = 1:length(start_is)
+        @assert start_is[i] <= stop_is[i]
+        seq[start_is[i]:stop_is[i]] = true
+    end
+    return seq
+end
 
-#check_camera
+sigs = getcameras(ocpirig)
+ton = ImagineInterface.CAMERA_ON_TIME[rig]
+toff = ImagineInterface.CAMERA_OFF_TIME[rig]
+samps_on_tol = ceil(Int, uconvert(inv(unit(srate)), ton) * srate)
+samps_off_tol = ceil(Int, uconvert(inv(unit(srate)), toff) * srate)
+frate = max_framerate(rig, chip_size(rig)...)
+start2start_tol = ceil(Int, uconvert(inv(unit(srate)), 1/frate) * srate)
+first_i = 2
 
-#check_cameras
+start_is, stop_is = test_seq1(first_i, samps_on_tol, start2start_tol)
+check_pulse_changetime(start_is, stop_is, samps_on_tol, samps_off_tol)
+check_pulse_interval(start_is, start2start_tol)
+samps = gen_samp_seq(start_is, stop_is, stop_is[end]+1)
+append!(sigs[1], "test", samps)
+check_camera(sigs[1])
+check_cameras(sigs)
+append!(sigs[2], "test2", samps)
+check_cameras(sigs)
 
-#check_laser
+#check_pluse_changetime fails because on time is too short
+start_is, stop_is = test_seq1(first_i, samps_on_tol-1, start2start_tol)
+@test_throws Exception check_pulse_changetime(start_is, stop_is, samps_on_tol, samps_off_tol)
+check_pulse_interval(start_is, start2start_tol)
+samps = gen_samp_seq(start_is, stop_is, stop_is[end]+1)
+replace!(sigs[1], "test", samps)
+@test_throws Exception check_camera(sigs[1])
 
-#check_lasers
+
+#check_pulse_interval fails because start2start is to short
+start_is, stop_is = test_seq1(first_i, samps_on_tol, start2start_tol-1)
+check_pulse_changetime(start_is, stop_is, samps_on_tol, samps_off_tol)
+@test_throws Exception check_pulse_interval(start_is, start2start_tol)
+samps = gen_samp_seq(start_is, stop_is, stop_is[end]+1)
+replace!(sigs[1], "test", samps)
+@test_throws Exception check_camera(sigs[1])
+
+start_is, stop_is = test_seq2(first_i, samps_off_tol, start2start_tol)
+check_pulse_changetime(start_is, stop_is, samps_on_tol, samps_off_tol)
+check_pulse_interval(start_is, start2start_tol)
+samps = gen_samp_seq(start_is, stop_is, stop_is[end]+1)
+replace!(sigs[1], "test", samps)
+check_camera(sigs[1])
+
+#check_pluse_changetime fails because off time is too short
+start_is, stop_is = test_seq2(first_i, samps_off_tol-1, start2start_tol)
+@test_throws Exception check_pulse_changetime(start_is, stop_is, samps_on_tol, samps_off_tol)
+check_pulse_interval(start_is, start2start_tol)
+samps = gen_samp_seq(start_is, stop_is, stop_is[end]+1)
+replace!(sigs[1], "test", samps)
+@test_throws Exception check_camera(sigs[1])
+
+#check_pulse_interval fails because start2start is to short
+start_is, stop_is = test_seq2(first_i, samps_off_tol, start2start_tol-1)
+check_pulse_changetime(start_is, stop_is, samps_on_tol, samps_off_tol)
+@test_throws Exception check_pulse_interval(start_is, start2start_tol)
+samps = gen_samp_seq(start_is, stop_is, stop_is[end]+1)
+replace!(sigs[1], "test", samps)
+@test_throws Exception check_camera(sigs[1])
+
+
+
+############################ Similar tests for lasers (should think about simplifying this)
+sigs = getlasers(ocpirig)
+ton = ImagineInterface.LASER_ON_TIME[rig]
+toff = ImagineInterface.LASER_OFF_TIME[rig]
+samps_on_tol = ceil(Int, uconvert(inv(unit(srate)), ton) * srate)
+samps_off_tol = ceil(Int, uconvert(inv(unit(srate)), toff) * srate)
+start2start_tol = samps_on_tol+samps_on_tol+2 #currently we don't limit laser pulse rate (except indirectly through ton and toff) so just setting this to something safe
+first_i = 2
+
+start_is, stop_is = test_seq1(first_i, samps_on_tol, start2start_tol)
+check_pulse_changetime(start_is, stop_is, samps_on_tol, samps_off_tol)
+check_pulse_interval(start_is, start2start_tol)
+samps = gen_samp_seq(start_is, stop_is, stop_is[end]+1)
+append!(sigs[1], "test3", samps)
+check_laser(sigs[1])
+check_lasers(sigs)
+append!(sigs[2], "test4", samps)
+check_lasers(sigs)
+
+#check_pluse_changetime fails because on time is too short
+start_is, stop_is = test_seq1(first_i, samps_on_tol-1, start2start_tol)
+@test_throws Exception check_pulse_changetime(start_is, stop_is, samps_on_tol, samps_off_tol)
+check_pulse_interval(start_is, start2start_tol)
+samps = gen_samp_seq(start_is, stop_is, stop_is[end]+1)
+replace!(sigs[1], "test3", samps)
+@test_throws Exception check_laser(sigs[1])
+
+
+start_is, stop_is = test_seq2(first_i, samps_off_tol, start2start_tol)
+check_pulse_changetime(start_is, stop_is, samps_on_tol, samps_off_tol)
+check_pulse_interval(start_is, start2start_tol)
+samps = gen_samp_seq(start_is, stop_is, stop_is[end]+1)
+replace!(sigs[1], "test3", samps)
+check_laser(sigs[1])
+
+#check_pluse_changetime fails because off time is too short
+start_is, stop_is = test_seq2(first_i, samps_off_tol-1, start2start_tol)
+@test_throws Exception check_pulse_changetime(start_is, stop_is, samps_on_tol, samps_off_tol)
+check_pulse_interval(start_is, start2start_tol)
+samps = gen_samp_seq(start_is, stop_is, stop_is[end]+1)
+replace!(sigs[1], "test3", samps)
+@test_throws Exception check_laser(sigs[1])

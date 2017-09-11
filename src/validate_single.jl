@@ -82,14 +82,14 @@ end
 function check_pulse_changetime(start_is::Vector{Int}, stop_is::Vector{Int}, nsamps_on_tol::Int, nsamps_off_tol::Int)
     if nsamps_on_tol > 0
         for i = 1:length(start_is)
-            if stop_is[i] - start_is[i] < nsamps_on_tol
+            if stop_is[i] - start_is[i] + 1 < nsamps_on_tol
                 error("Pulse #$i has insufficient duration")
             end
         end
     end
     if nsamps_off_tol > 0
         for i = 1:(length(start_is) - 1)
-            if start_is[i+1] - stop_is[i] < nsamps_off_tol
+            if start_is[i+1] - stop_is[i] - 1 < nsamps_off_tol
                 error("The interval between pulse #$i end and pulse #$(i+1) start is too small")
             end
         end
@@ -116,10 +116,10 @@ function check_pulses(sig::ImagineSignal, on_time::HasTimeUnits, off_time::HasTi
     rig = rig_name(sig)
     strts = find_pulse_starts(sig)
     stps = find_pulse_stops(sig)
-    min_on_samps = on_time * samprate(sig)
-    min_off_samps = off_time * samprate(sig)
+    min_on_samps = ceil(Int, on_time * uconvert(inv(unit(on_time)), samprate(sig)))
+    min_off_samps = ceil(Int, off_time * uconvert(inv(unit(off_time)), samprate(sig)))
     check_pulse_changetime(strts, stps, min_on_samps, min_off_samps)
-    nsamps_start_to_start = (1/pulse_rate) * samprate(cam)
+    nsamps_start_to_start = ceil(Int, (1/pulse_rate) * uconvert(unit(pulse_rate), samprate(sig)))
     if !isinf(pulse_rate)
         min_interval_width = check_pulse_interval(strts, nsamps_start_to_start)
     end
@@ -134,6 +134,10 @@ check_cameras{TS<:ImagineSignal}(sigs::AbstractVector{TS}) = map(check_camera, g
 #   the 0->1->0->1 interval is greater than or equal to 1 / the max framerate
 #   max_framerate = max_framerate(rig, chip_size(rig)...)
 function check_camera(cam::ImagineSignal; chip_sz = chip_size(rig_name(cam)))    
+    if isempty(cam)
+        warn("Signal $name(cam) is empty.  Skipping validation.")
+        return true
+    end
     rig = rig_name(cam)
     min_on_dur = CAMERA_ON_TIME[rig]
     min_off_dur = CAMERA_OFF_TIME[rig]
@@ -149,6 +153,10 @@ check_lasers{TS<:ImagineSignal}(sigs::AbstractVector{TS}) = map(check_laser, get
 #   the 1->0->1 interval is greater than or equal to LASER_OFF_TIME
 #   the 0->1->0->1 interval is unconstrained
 function check_laser(las::ImagineSignal)
+    if isempty(las)
+        warn("Signal $name(cam) is empty.  Skipping validation.")
+        return true
+    end
     rig = rig_name(las)
     min_on_dur = LASER_ON_TIME[rig]
     min_on_samps = min_on_dur * samprate(las)

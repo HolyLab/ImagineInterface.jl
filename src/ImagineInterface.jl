@@ -114,6 +114,9 @@ export find_pulse_starts,
         find_pulse_stops,
         count_pulses
 
+#validate_singles.jl
+export validate_all
+
 #write.jl
 export write_commands
 

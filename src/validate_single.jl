@@ -163,3 +163,14 @@ function check_laser(las::ImagineSignal)
     min_off_dur = LASER_OFF_TIME[rig]
     check_pulses(las, min_on_dur, min_off_dur, Inf*inv(Unitful.s))
 end
+
+function validate_singles{TS<:ImagineSignal}(sigs::AbstractVector{TS})
+    check_piezos(sigs)
+    check_cameras(sigs)
+    check_lasers(sigs)
+end
+
+function validate_all{TS<:ImagineSignal}(sigs::AbstractVector{TS}; check_is_sufficient = true)
+    validate_group(sigs; check_is_sufficient = check_is_sufficient)
+    validate_singles(sigs)
+end

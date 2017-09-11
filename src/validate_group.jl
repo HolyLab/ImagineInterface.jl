@@ -89,6 +89,5 @@ function validate_group(sigs::Vector{ImagineSignal}; check_is_sufficient = true)
         check_sufficiency(sigs)
     end
     check_samptypes(sigs, rig)
-    #check_speed_limits(coms_used, rig) #TODO: implement this
     return true
 end

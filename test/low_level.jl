@@ -67,6 +67,13 @@ sampsd = get_samples(las1, 1, nsamps; sampmap=:volts)
 sampsd = get_samples(las1, 1, nsamps; sampmap=:raw)
 @test eltype(sampsd) == rawtype(las1) #UInt8 by default
 
+#this caught an off-by-one error
+_cam = getcameras(rigtemplate("ocpi-2"; sample_rate = 1000 * inv(Unitful.s)))[1]
+c = fill(UInt8(1), 10)
+c[1] = 0
+c[end] = 0
+append!(_cam, "c", c)
+@test ImagineInterface.get_samples_raw(_cam, 10, 10)[1] == false
 
 #convenience
 digs = getdigital(allcoms)

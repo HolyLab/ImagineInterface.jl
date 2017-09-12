@@ -51,6 +51,9 @@ function _parse_command(rig::String, chan_name::String, daq_chan_name::String, s
     end
     cumlen = zeros(Int, length(seqlist))
     calc_cumlength!(cumlen, seqlist)
+    for s in unique(seqnames) #Convert from Any vectors to RLEVectors
+        seqs_lookup[s] = vectype(seqs_lookup[s])
+    end
     return ImagineSignal{vectype}(chan_name, daq_chan_name, rig, seqlist, seqnames, seqs_lookup, cumlen, sampmapper)
 end
 

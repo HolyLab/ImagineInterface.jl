@@ -225,7 +225,7 @@ function get_samples_raw{T<:RLEVector}(com::ImagineSignal{T}, istart::Int, istop
         error("The requested time interval is out of bounds")
     end
 
-    iseq = 1
+    iseq = 1 #index into the sequence vector
     offset0 = 0
 
     #find the sequence containing istart
@@ -241,22 +241,18 @@ function get_samples_raw{T<:RLEVector}(com::ImagineSignal{T}, istart::Int, istop
     else
         offset0 = istart
     end
-
     seq = com.sequences[iseq]
-    ival = 1
-    curcount = 1
-    icount = 0
+    ival = 1 #index into the RLEVector
+    icount = 0 #counts of the current repeatedvalue
     #find istart in terms of its current index in the val array, index in the count array, and count
     while offset0 > 1
         icount+=1
         offset0-=1
-        if icount > seq[curcount].n
-            curcount+=1
+        if icount >= count(seq[ival])
             ival+=1
             icount = 0
         end
     end
-
     num_samps = istop - istart + 1
     output = zeros(rawtype(com), num_samps)
     #decompress num_samps samples beginning at istart
@@ -264,14 +260,13 @@ function get_samples_raw{T<:RLEVector}(com::ImagineSignal{T}, istart::Int, istop
     output[so_far] = seq[ival].value #write first sample
     while so_far < num_samps
         icount+=1
-        if icount == seq[curcount].n #if we should increment curcount, ival and reset icount
-            if curcount+1 > length(seq) #if we should increment iseq and reset curcount,icount,ival
+        if icount == count(seq[ival]) #if we should increment ival and reset icount
+            if ival+1 > length(seq) #if we should increment iseq and reset icount,ival
                 iseq+=1
                 seq = com.sequences[iseq]
-                curcount = ival = 1
+                ival = 1
                 icount = 0
             else
-                curcount+=1
                 ival+=1
                 icount = 0
             end
@@ -282,8 +277,14 @@ function get_samples_raw{T<:RLEVector}(com::ImagineSignal{T}, istart::Int, istop
     return output
 end
 
-function add_sequence!{T<:RLEVector}(com::ImagineSignal{T}, seqname::String, sequence)
+function add_sequence!{T<:RLEVector, TS}(com::ImagineSignal{T}, seqname::String, sequence::AbstractVector{TS})
+    cseq = compress(sequence, mapper(com))
+    add_sequence!(com, seqname, cseq)
+end
+
+function add_sequence!{T<:RLEVector}(com::ImagineSignal{T}, seqname::String, sequence::T)
     seqdict = sequence_lookup(com)
+    @assert full_length(sequence) >= 1
     if haskey(seqdict, seqname)
         error("A sequence by this name exists.  If you want to replace the existing sequence, use the replace! function")
     else
@@ -322,6 +323,7 @@ end
 
 function append!{T<:RLEVector}(com::ImagineSignal{T}, seqname::String, sequence::T)
     #TODO: run safety checks here
+    @assert full_length(sequence) >= 1
     add_sequence!(com, seqname, sequence)
     push!(sequences(com), sequence)
     push!(sequence_names(com), seqname)
@@ -366,6 +368,7 @@ function replace!{T<:RLEVector, TS}(com::ImagineSignal{T}, seqname::String, sequ
     else
         #TODO: run safety checks here
         cseq = compress(sequence, mapper(com))
+        @assert full_length(cseq) >= 1
         seqdict[seqname] = cseq
         seqidxs = find(x->x==seqname, sequence_names(com))
         allseqs = sequences(com)

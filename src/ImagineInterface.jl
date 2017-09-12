@@ -25,6 +25,9 @@ include("hardware_templates.jl")
 include("convenience.jl")
 include("parse.jl")
 include("sequence_analysis.jl")
+include("validate_group.jl")
+include("window_validate.jl")
+include("validate_single.jl")
 include("write.jl")
 include("stack.jl")
 
@@ -110,6 +113,9 @@ export parse_command,
 export find_pulse_starts,
         find_pulse_stops,
         count_pulses
+
+#validate_singles.jl
+export validate_all
 
 #write.jl
 export write_commands

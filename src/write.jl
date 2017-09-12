@@ -115,7 +115,9 @@ function write_commands(fname::String, coms::Vector{ImagineSignal}, nstacks::Int
     @assert splitext(fname)[2] == ".json"
     isused = map(x-> !isoutput(x) || !isempty(x), coms)
     coms_used = coms[isused]
+    print("Validating signals before writing...\n")
     validate_all(coms_used; check_is_sufficient = true)
+    print("...finished validating signals\n")
     rig = rig_name(first(coms_used))
     seq_lookup = combine_lookups(coms_used)
     mons = get_missing_monitors(coms_used)

@@ -5,7 +5,9 @@ using ImagineInterface
 import ImagineInterface.METADATA_KEY
 
 #test reading
-fname = "../examples/controls_triangle.json"
+
+example_dir = joinpath(dirname(@__DIR__), "examples")
+fname = joinpath(example_dir, "controls_triangle.json")
 
 #analog
 d = JSON.parsefile(fname)

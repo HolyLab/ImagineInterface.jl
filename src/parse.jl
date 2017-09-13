@@ -85,6 +85,7 @@ function parse_ai(ai_name, chns, labels, rig, sample_rate::HasInverseTimeUnits)
     nsamples = convert(Int,nbytes/nchannels/sizeof(aitype))
     f = open(ai_name, "r")
     A = Mmap.mmap(f, Matrix{aitype}, (nchannels,nsamples))
+
     parse_ai(A, chns, labels, rig, sample_rate)
 end
 
@@ -174,6 +175,7 @@ function parse_di(di_name, rig, sample_rate::HasInverseTimeUnits)
     f = open(di_name, "r")
     A = Mmap.mmap(f, BitArray, (8,nsamples))
     output = ImagineSignal[]
+    close(f)
     for i = 1:8
         sig = insigs[i]
         daq_chan_str = daq_channel(sig)

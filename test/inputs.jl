@@ -3,11 +3,11 @@ using Base.Test
 using Unitful
 import Unitful:s
 
-e_dir = "../examples/"
+e_dir = joinpath(dirname(@__DIR__), "examples")
 
-ai_recs = parse_ai(e_dir*"t.ai"; imagine_header = e_dir*"t.imagine")
-di_recs = parse_di(e_dir*"t.di"; imagine_header = e_dir*"t.imagine")
-o_coms = parse_commands(e_dir*"t.json")
+ai_recs = parse_ai(joinpath(e_dir, "t.ai"); imagine_header = joinpath(e_dir, "t.imagine"))
+di_recs = parse_di(joinpath(e_dir, "t.di"); imagine_header = joinpath(e_dir, "t.imagine"))
+o_coms = parse_commands(joinpath(e_dir, "t.json"))
 do_coms = getoutputs(getdigital(o_coms))
 ao_coms = getoutputs(getanalog(o_coms))
 di_coms = getinputs(getdigital(o_coms))
@@ -16,7 +16,7 @@ ai_coms = getinputs(getanalog(o_coms))
 @test length(di_coms) == length(di_recs)
 @test length(ai_coms) == length(ai_recs)
 
-hdr = ImagineFormat.parse_header("../examples/t.imagine")
+hdr = ImagineFormat.parse_header(joinpath(e_dir, "t.imagine"))
 
 ai_chans = hdr["channel list"]
 ai_labs = split(hdr["label list"], "\$")
@@ -71,13 +71,13 @@ pos_ai = ustrip(get_samples(getname(ai_recs, "axial piezo monitor")))
 @test cor(pos_ao, pos_ai) >= 0.99
 
 #Automatic .json, .ai, .di, and .imagine loading
-exp_sigs = load_signals(e_dir*"t.json")
+exp_sigs = load_signals(joinpath(e_dir, "t.json"))
 @test length(exp_sigs) == length(do_coms) + length(ao_coms) + length(di_recs) + length(ai_recs)
 for s in Iterators.flatten((do_coms, ao_coms, di_recs, ai_recs))
     @test s == getname(exp_sigs, name(s))
 end
 
-@test all(exp_sigs .== load_signals(e_dir*"t.imagine"))
-@test all(exp_sigs .== load_signals(e_dir*"t.ai"))
-@test all(exp_sigs .== load_signals(e_dir*"t.di"))
+@test all(exp_sigs .== load_signals(joinpath(e_dir, "t.imagine")))
+@test all(exp_sigs .== load_signals(joinpath(e_dir, "t.ai")))
+@test all(exp_sigs .== load_signals(joinpath(e_dir, "t.di")))
 

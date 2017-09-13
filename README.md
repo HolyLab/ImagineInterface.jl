@@ -1,4 +1,5 @@
 # ImagineInterface
+[![Build Status](https://travis-ci.org/HolyLab/ImagineInterface.svg?branch=master)](https://travis-ci.org/HolyLab/ImagineInterface)
 [![Build status](https://ci.appveyor.com/api/projects/status/obywii010u9stx5f/branch/master?svg=true)](https://ci.appveyor.com/project/Cody-G/imagineinterface/branch/master)
 
 Read and write Imagine analog and digital recordings and commands

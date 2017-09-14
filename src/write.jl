@@ -49,7 +49,9 @@ end
 
 compress_seqnames(c::ImagineSignal) = compress(sequence_names(c))
 
-function initialize_outdict{TT<:HasTimeUnits, TTI<:HasInverseTimeUnits}(rig::String, seq_lookup::Dict, nstacks, frames_per_stack, exp_time::TT, samp_rate::TTI, nsamps, isbidi)
+cam_num_from_name(nm::String) = parse(Int, last(nm))
+
+function initialize_outdict{TTI<:HasInverseTimeUnits}(rig::String, seq_lookup::Dict, which_cams, nstacks, frames_per_stack, exp_time, samp_rate::TTI, nsamps, isbidi)
     out_dict = Dict{String,Any}()
     ana_dict = Dict{String,Any}()
     dig_dict = Dict{String,Any}()
@@ -69,12 +71,25 @@ function initialize_outdict{TT<:HasTimeUnits, TTI<:HasInverseTimeUnits}(rig::Str
 #    exp_time = exp_times[1]
     @assert isa(sampr, Integer) #TODO: Check for samprate beyond DAQ's capability
     out_dict[METADATA_KEY] = Dict("samples per second" => sampr,
-                                        "frames per stack" => frames_per_stack,
-                                        "stacks" => nstacks,
-                                        "bi-direction" => isbidi,
-                                        "exposure time in seconds" => ustrip(uconvert(Unitful.s, exp_time)),
-                                        "sample num" => nsamps,
-                                        "rig" => rig)
+                                            "bi-direction" => isbidi,
+                                            "sample num" => nsamps,
+                                            "rig" => rig)
+    if rig == "ocpi-2" #since OCPI-2 has two cameras, naming is different
+        for c in which_cams
+            i = cam_num_from_name(c)
+            #uncomment the below and delete existing when Imagine is updated
+            #out_dict[METADATA_KEY]["frames per stack for camera$i"] = frames_per_stack[min(i, length(frames_per_stack))]
+            out_dict[METADATA_KEY]["frames per stack"] = frames_per_stack
+            #out_dict[METADATA_KEY]["stacks for camera$i"] = nstacks[min(i, length(nstacks))]
+            out_dict[METADATA_KEY]["stacks"] = nstacks
+            out_dict[METADATA_KEY]["exposure time in seconds for camera$i"] = ustrip(uconvert(Unitful.s, exp_time[min(i, length(exp_time))]))
+        end
+
+    else
+        out_dict[METADATA_KEY]["frames per stack"] = frames_per_stack
+        out_dict[METADATA_KEY]["stacks"] = nstacks
+        out_dict[METADATA_KEY]["exposure time in seconds"] = ustrip(uconvert(Unitful.s, exp_time))
+    end
     return out_dict
 end
 
@@ -111,17 +126,39 @@ function get_missing_monitors(coms_used)
     return output
 end
 
-function write_commands(fname::String, coms::Vector{ImagineSignal}, nstacks::Int, nframes::Int, exp_time::HasTimeUnits; isbidi::Bool=false)
+function check_cam_meta1(cams, params, description::String)
+    if length(cams) > 1  && length(params) == 1
+        warn("Two camera output signals were supplied with only one $description argument.  Applying this argument to both cameras")
+    elseif length(cams) == 1 && length(params) == 2
+        error("Two $description parameters were supplied but only one camera is in use")
+    else
+        error("Invalid camera and parameter combination")
+    end
+end
+
+function check_cam_meta(coms::Vector{ImagineSignal}, nstacks, nframes, exp_time)
+    cams = getcameras(coms)
+    #uncomment when Imagine is updated
+    #check_cam_meta1(cams, nstacks, "nstacks")
+    #check_cam_meta1(cams, nframes, "nframes")
+    check_cam_meta1(cams, exp_time, "exp_time")
+    #TODO: count number of frame pulses in signal to make sure it matches
+    which_cams = map(name, cams)
+    return which_cams
+end
+
+function write_commands(fname::String, coms::Vector{ImagineSignal}, nstacks::NS, nframes::NF, exp_time::EXP; isbidi::Bool=false) where {NS <: Union{Int, Vector{Int}}, NF <: Union{Int, Vector{Int}}, EXP <: Union{HasTimeUnits, Vector{HasTimeUnits}}}
     @assert splitext(fname)[2] == ".json"
     isused = map(x-> !isoutput(x) || !isempty(x), coms)
     coms_used = coms[isused]
     print("Validating signals before writing...\n")
+    which_cams = check_cam_meta(coms_used, nstacks, nframes, exp_time)
     validate_all(coms_used; check_is_sufficient = true)
     print("...finished validating signals\n")
     rig = rig_name(first(coms_used))
     seq_lookup = combine_lookups(coms_used)
     mons = get_missing_monitors(coms_used)
-    out_dict = initialize_outdict(rig, seq_lookup, nstacks, nframes, exp_time, samprate(coms[1]), length(coms[1]), isbidi)
+    out_dict = initialize_outdict(rig, seq_lookup, which_cams, nstacks, nframes, exp_time, samprate(coms[1]), length(coms[1]), isbidi)
     if !isempty(mons)
         print("Adding the following required monitors (inputs) to the command file: $(map(name, mons)) \n")
     end

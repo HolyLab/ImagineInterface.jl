@@ -98,7 +98,7 @@ end
 
 #write
 outname = splitext(tempname())[1] *".json"
-exp_time = d[METADATA_KEY]["exposure time in seconds"] * Unitful.s
+exp_time = d[METADATA_KEY]["exposure time in seconds for camera1"] * Unitful.s
 write_commands(outname, allcoms, nstacks, nframes, exp_time; isbidi = false)
 allcoms2 = parse_commands(outname)
 sp = sortperm(map(name,allcoms)) #sort alphabetically to compare

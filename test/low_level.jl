@@ -7,7 +7,7 @@ import ImagineInterface.METADATA_KEY
 #test reading
 
 example_dir = joinpath(dirname(@__DIR__), "examples")
-fname = joinpath(example_dir, "controls_triangle.json")
+fname = joinpath(example_dir, "t.json")
 
 #analog
 d = JSON.parsefile(fname)
@@ -26,12 +26,15 @@ rig = d[METADATA_KEY]["rig"]
 
 allcoms = parse_commands(fname)
 cam = getcameras(allcoms)[1]
-nframes = d[METADATA_KEY]["frames per stack"]
-nstacks = d[METADATA_KEY]["stacks"]
+camid = name(cam)
+@test in(camid, keys(d[METADATA_KEY]))
+
+nframes = d[METADATA_KEY][camid]["frames per stack"]
+nstacks = d[METADATA_KEY][camid]["stacks"]
 @test nframes*nstacks == count_pulses(cam)
 
 #digital
-nm = "405nm laser"
+nm = "488nm laser shutter"
 las1 = getname(allcoms, nm)
 @test isdigital(las1) == true
 @test name(las1) == nm
@@ -49,7 +52,7 @@ axs = axes(sampsa)
 @test length(axs) == 1
 axsv = axisvalues(axs[1])
 @test length(axsv) == 1
-@test axsv[1] == linspace(0.0*Unitful.s,6.9999*Unitful.s,nsamps)
+@test axsv[1] == linspace(0.0*Unitful.s, 4.74238*Unitful.s, nsamps)
 
 #voltage-mapped, analog
 sampsa = get_samples(pos, 1, nsamps; sampmap=:volts)
@@ -98,15 +101,14 @@ end
 
 #write
 outname = splitext(tempname())[1] *".json"
-exp_time = d[METADATA_KEY]["exposure time in seconds for camera1"] * Unitful.s
-write_commands(outname, allcoms, nstacks, nframes, exp_time; isbidi = false)
+exp_time = d[METADATA_KEY]["camera1"]["exposure time in seconds"] * Unitful.s
+write_commands(outname, allcoms, nstacks, nframes, exp_time; exp_trig_mode = "External Start", isbidi = false)
 allcoms2 = parse_commands(outname)
 sp = sortperm(map(name,allcoms)) #sort alphabetically to compare
 sp2 = sortperm(map(name,allcoms2))
-#The example file doesn't have input entries, so they should have been added automatically when saving
-@test length(allcoms2) == length(allcoms) + 3
-@assert length(findinputs(allcoms2)) == 3
-@test allcoms[sp] == getoutputs(allcoms2[sp2])
+@test length(allcoms2) == length(allcoms)
+@assert length(findinputs(allcoms2)) == 4
+@test allcoms[sp] == allcoms2[sp2]
 rm(outname)
 
 #build commands from template

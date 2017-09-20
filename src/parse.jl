@@ -170,13 +170,12 @@ end
 #Does not require imagine file, loads all 8 channels
 function parse_di(di_name, rig, sample_rate::HasInverseTimeUnits)
     insigs = getdigital(getinputs(rigtemplate(rig; sample_rate = sample_rate)))
-    @assert length(insigs) == 8
     nsamples = filesize(di_name) #each sample is one byte
     f = open(di_name, "r")
-    A = Mmap.mmap(f, BitArray, (8,nsamples))
+    A = Mmap.mmap(f, BitArray, (8,nsamples)) #we need all 8 bits even if the user didn't ask for 8 channels of DI
     output = ImagineSignal[]
     close(f)
-    for i = 1:8
+    for i = 1:length(insigs)
         sig = insigs[i]
         daq_chan_str = daq_channel(sig)
         biti = findfirst(x->x==daq_chan_str, DI_CHANS[rig])

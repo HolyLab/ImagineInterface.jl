@@ -65,7 +65,6 @@ function initialize_outdict{TTI<:HasInverseTimeUnits}(rig::String, seq_lookup::D
                                             "bi-direction" => isbidi,
                                             "sample num" => nsamps,
                                             "rig" => rig,
-                                            "version" => "v1.1",
                                             "generated from" => "ImagineInterface")
     for c in which_cams
         camdict = Dict{String, Any}()
@@ -78,6 +77,7 @@ function initialize_outdict{TTI<:HasInverseTimeUnits}(rig::String, seq_lookup::D
         camdict["exposure time in seconds"] = ustrip(uconvert(Unitful.s, exp_time[min(i, length(exp_time))]))
         camdict["exposure trigger mode"] = exp_trig_mode[min(i, length(nstacks))]
     end
+    out_dict["version"] = "v1.1"
     return out_dict
 end
 

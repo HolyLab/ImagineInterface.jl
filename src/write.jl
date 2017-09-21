@@ -130,9 +130,6 @@ function check_cam_meta(coms::Vector{ImagineSignal}, nstacks, nframes, exp_time,
     check_cam_param_counts(cams, nframes, "nframes")
     check_cam_param_counts(cams, exp_time, "exp_time")
     allowed_modes = ["External Start"; "External Control"; "Fast External Control"]
-    if isa(exp_trig_mode, AbstractString)
-        exp_trig_mode = [exp_trig_mode;]
-    end
     for m in exp_trig_mode
         if !in(m, allowed_modes)
             error("Exposure trigger mode $m is unrecognized.  Only these modes are allowed: $(allowed_modes)")
@@ -146,6 +143,9 @@ end
 
 function write_commands(fname::String, coms::Vector{ImagineSignal}, nstacks::NS, nframes::NF, exp_time::EXP; exp_trig_mode = ["External Start";], isbidi::Bool=false) where {NS <: Union{Int, Vector{Int}}, NF <: Union{Int, Vector{Int}}, EXP <: Union{HasTimeUnits, Vector{HasTimeUnits}}}
     @assert splitext(fname)[2] == ".json"
+    if isa(exp_trig_mode, AbstractString)
+        exp_trig_mode = [exp_trig_mode;]
+    end
     isused = map(x-> !isoutput(x) || !isempty(x), coms)
     coms_used = coms[isused]
     print("Validating signals before writing...\n")

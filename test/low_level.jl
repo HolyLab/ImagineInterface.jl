@@ -104,6 +104,9 @@ outname = splitext(tempname())[1] *".json"
 exp_time = d[METADATA_KEY]["camera1"]["exposure time in seconds"] * Unitful.s
 write_commands(outname, allcoms, nstacks, nframes, exp_time; exp_trig_mode = "External Start", isbidi = false)
 allcoms2 = parse_commands(outname)
+d2 = JSON.parsefile(outname)
+@test d2[METADATA_KEY]["camera1"]["exposure trigger mode"] == "External Start"
+
 sp = sortperm(map(name,allcoms)) #sort alphabetically to compare
 sp2 = sortperm(map(name,allcoms2))
 @test length(allcoms2) == length(allcoms)

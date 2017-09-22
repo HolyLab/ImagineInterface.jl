@@ -135,7 +135,7 @@ check_cameras{TS<:ImagineSignal}(sigs::AbstractVector{TS}) = map(check_camera, g
 #   max_framerate = max_framerate(rig, chip_size(rig)...)
 function check_camera(cam::ImagineSignal; chip_sz = chip_size(rig_name(cam)))    
     if isempty(cam)
-        warn("Signal $name(cam) is empty.  Skipping validation.")
+        warn("Signal $(name(cam)) is empty.  Skipping validation.")
         return true
     end
     rig = rig_name(cam)
@@ -154,7 +154,7 @@ check_lasers{TS<:ImagineSignal}(sigs::AbstractVector{TS}) = map(check_laser, get
 #   the 0->1->0->1 interval is unconstrained
 function check_laser(las::ImagineSignal)
     if isempty(las)
-        warn("Signal $name(cam) is empty.  Skipping validation.")
+        warn("Signal $(name(las)) is empty.  Skipping validation.")
         return true
     end
     rig = rig_name(las)

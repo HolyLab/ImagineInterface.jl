@@ -1,24 +1,24 @@
 IMAGINE
 [general]
 header version=7
-app version=2.0, build (Jul  5 2017, 10:40:58)
-date and time=2017-07-05T11:13:58
+app version=2.0, build (Sep 19 2017, 17:07:38)
+date and time=2017-09-19T17:10:05
 byte order=l
-rig=ocpi-2
+rig=ocpi-1
 
 [misc params]
 stimulus file content=
 comment=
-ai data file=t.ai
-di data file=t.di
-image data file=d:t.cam
-command file=t.json
-piezo=start position: NA;stop position: NA;output scan rate: 50000;bidirection: 0
+ai data file=f:/test/t1.ai
+image data file=f:/test/t1.cam
+command file=
+di data file=f:/test/t1.di
+piezo=start position: 100 um;stop position: 400 um;output scan rate: 50000;bidirection: 0
 
 [ai]
 nscans=-1
-channel list=0 2
-label list=axial piezo monitor$camera1 analog monitor
+channel list=0 1 4
+label list=axial piezo monitor$stimuli$AI4
 scan rate=50000
 min sample=-32768
 max sample=32767
@@ -27,29 +27,29 @@ max input=10
 
 [di]
 di nscans=-1
-di channel list=24 25 26 27 28 29 30 31
-di label list=camera1 frame monitor$camera2 frame monitor$laser monitor$unused$unused$unused$unused$unused
+di channel list=7
+di label list=camera1 frame monitor
 di scan rate=50000
 
 [camera]
 original image depth=16
 saved image depth=16
-image width=2060
-image height=2048
-number of frames requested=650
-nStacks=10
-idle time between stacks=NA
+image width=2560
+image height=2160
+number of frames requested=120
+nStacks=6
+idle time between stacks=0.15 s
 pre amp gain=
 gain=0
-exposure time=0.011 s
+exposure time=0.03 s
 vertical shift speed=
 vertical clock vol amp=-1
 readout rate=
 pixel order=x y z
 frame index offset=0
-frames per stack=65
+frames per stack=20
 pixel data type=uint16
 camera=edge.main
 um per pixel=-1
-binning=hbin:1;vbin:1;hstart:1;hend:2060;vstart:1;vend:2048
+binning=hbin:1;vbin:1;hstart:1;hend:2560;vstart:1;vend:2160
 angle from horizontal (deg)=-1

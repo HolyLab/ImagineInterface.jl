@@ -4,6 +4,7 @@ push!(RIGS, rig_key)
 const ocpi1_mappings = Dict("AO0"=>"axial piezo",
                       "AO1"=>"analogout1",
                       "AI0"=>"axial piezo monitor",
+                      "AI1"=>"stimuli",
                       "AI2"=>"analogin1",
                       "AI3"=>"analogin2",
                       "AI4"=>"analogin3",
@@ -31,7 +32,7 @@ DEFAULT_DAQCHANS_TO_NAMES[rig_key] = ocpi1_mappings
 DEFAULT_NAMES_TO_DAQCHANS[rig_key] = map(reverse, ocpi1_mappings)
 
 const ocpi1_aochans = map(x->"AO$(x)", 0:1)
-const ocpi1_aichans = map(x->"AI$(x)", vcat([0;], [2:15...])) #currently AI1 is unused 
+const ocpi1_aichans = map(x->"AI$(x)", 0:15)
 const ocpi1_dochans = map(x->"P0.$(x)", 0:6)
 const ocpi1_dichans = ["P0.7";]
 const ocpi1_pos_ctrl_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["axial piezo"])
@@ -40,7 +41,7 @@ const ocpi1_cam_ctrl_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["cam
 const ocpi1_cam_mon_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["camera1 frame monitor"])
 const ocpi1_laschans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["488nm laser shutter"])
 const ocpi1_stimchans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["stimulus$x" for x = 1:5])
-const ocpi1_fixed_names = ["axial piezo", "axial piezo monitor", "488nm laser shutter", "camera1", "camera1 frame monitor"]
+const ocpi1_fixed_names = ["axial piezo", "axial piezo monitor", "488nm laser shutter", "camera1", "camera1 frame monitor", "stimuli"]
 const ocpi1_fixed_daqchans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ocpi1_fixed_names)
 
 AO_CHANS[rig_key] = OrderedSet(ocpi1_aochans)

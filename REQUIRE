@@ -2,6 +2,7 @@ JSON
 AxisArrays
 IntervalSets
 Unitful
+Ranges
 MappedArrays
 ImagineFormat
 DataStructures

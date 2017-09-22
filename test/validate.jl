@@ -2,7 +2,7 @@ using ImagineInterface
 using Base.Test, IntervalSets, Unitful
 
 import ImagineInterface: check_max_speed, ValidationState, check_piezo, check_piezos
-import ImagineInterface: check_pulse_padding, check_pulse_changetime, check_pulse_interval
+import ImagineInterface: check_pulse_changetime, check_pulse_interval
 import ImagineInterface: check_camera, check_cameras, check_laser, check_lasers
 
 #check_max_speed
@@ -58,16 +58,6 @@ replace!(pos, "b", b)
 
 #check_piezos
 @test isa(check_piezos(getpositioners(ocpi2); window_sz = win_sz), ValidationState)
-
-#check_pulse_padding
-cam = getcameras(ocpi2)[1]
-c = trues(10)
-append!(cam, "c", c)
-@test_throws Exception check_pulse_padding(cam)
-c[1] = false
-c[end] = false
-replace!(cam, "c", c)
-check_pulse_padding(cam)
 
 #test pulse validation code camera
 srate = 100000*inv(Unitful.s)
@@ -173,6 +163,7 @@ check_laser(sigs[1])
 check_lasers(sigs)
 append!(sigs[2], "test4", samps)
 check_lasers(sigs)
+append!(sigs[3], "test5", trues(length(samps))) #laser always on
 
 #check_pluse_changetime fails because on time is too short
 start_is, stop_is = test_seq1(first_i, samps_on_tol-1, start2start_tol)

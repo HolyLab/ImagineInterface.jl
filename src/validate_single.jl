@@ -70,15 +70,6 @@ function check_max_speed(raw_samps::Vector, raw_change::Int, in_n_samps::Int)
     return true
 end
 
-function check_pulse_padding(sig::ImagineSignal)
-    if get_samples(sig, 1, 1)[1] == true
-        error("Pulse sequence must begin with a LOW sample")
-    end
-    if get_samples(sig, length(sig), length(sig))[1] == true
-        error("Pulse sequence must end with a LOW sample")
-    end
-end
-
 function check_pulse_changetime(start_is::Vector{Int}, stop_is::Vector{Int}, nsamps_on_tol::Int, nsamps_off_tol::Int)
     if nsamps_on_tol > 0
         for i = 1:length(start_is)
@@ -112,7 +103,6 @@ function check_pulse_interval(start_is::Vector{Int}, nsamps_interval_tol::Int)
 end
 
 function check_pulses(sig::ImagineSignal, on_time::HasTimeUnits, off_time::HasTimeUnits, pulse_rate::HasInverseTimeUnits)
-    check_pulse_padding(sig)
     rig = rig_name(sig)
     strts = find_pulse_starts(sig)
     stps = find_pulse_stops(sig)

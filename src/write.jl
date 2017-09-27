@@ -124,10 +124,10 @@ function check_cam_param_counts(cams, params, description::String)
     end
 end
 
-function check_cam_meta(coms::Vector{ImagineSignal}, nstacks, nframes, exp_time, exp_trig_mode)
+function check_cam_meta(coms::Vector{ImagineSignal}, nstacks, nframes_per_stack, exp_time, exp_trig_mode)
     cams = getcameras(coms)
     check_cam_param_counts(cams, nstacks, "nstacks")
-    check_cam_param_counts(cams, nframes, "nframes")
+    check_cam_param_counts(cams, nframes_per_stack, "nframes_per_stack")
     check_cam_param_counts(cams, exp_time, "exp_time")
     allowed_modes = ["External Start"; "External Control"; "Fast External Control"]
     for m in exp_trig_mode
@@ -136,12 +136,19 @@ function check_cam_meta(coms::Vector{ImagineSignal}, nstacks, nframes, exp_time,
         end
     end
     check_cam_param_counts(cams, exp_trig_mode, "exp_trig_mode")
-    #TODO: count number of frame pulses in signal to make sure it matches
+    frame_counts = zeros(length(cams))
+    for i = 1:length(cams)
+        frame_counts[i] = count_pulses(cams[i])
+        expected_count = nframes_per_stack[min(i,length(nframes_per_stack))] * nstacks[min(i, length(nstacks))]
+        if frame_counts[i] != nframes_per_stack[min(i,length(nframes_per_stack))] * nstacks[min(i, length(nstacks))]
+            error("Expected $expected_count frames but only counted $(frame_counts[i]) exposure trigger pulses for $(name(cams[i]))")
+        end
+    end
     which_cams = map(name, cams)
     return which_cams
 end
 
-function write_commands(fname::String, coms::Vector{ImagineSignal}, nstacks::NS, nframes::NF, exp_time::EXP; exp_trig_mode = ["External Start";], isbidi::Bool=false) where {NS <: Union{Int, Vector{Int}}, NF <: Union{Int, Vector{Int}}, EXP <: Union{HasTimeUnits, Vector{HasTimeUnits}}}
+function write_commands(fname::String, coms::Vector{ImagineSignal}, nstacks::NS, nframes_per_stack::NF, exp_time::EXP; exp_trig_mode = ["External Start";], isbidi::Bool=false) where {NS <: Union{Int, Vector{Int}}, NF <: Union{Int, Vector{Int}}, EXP <: Union{HasTimeUnits, Vector{HasTimeUnits}}}
     @assert splitext(fname)[2] == ".json"
     if isa(exp_trig_mode, AbstractString)
         exp_trig_mode = [exp_trig_mode;]
@@ -149,7 +156,7 @@ function write_commands(fname::String, coms::Vector{ImagineSignal}, nstacks::NS,
     isused = map(x-> !isoutput(x) || !isempty(x), coms)
     coms_used = coms[isused]
     print("Validating signals before writing...\n")
-    which_cams = check_cam_meta(coms_used, nstacks, nframes, exp_time, exp_trig_mode)
+    which_cams = check_cam_meta(coms_used, nstacks, nframes_per_stack, exp_time, exp_trig_mode)
     validate_all(coms_used; check_is_sufficient = true)
     print("...finished validating signals\n")
     rig = rig_name(first(coms_used))
@@ -164,7 +171,7 @@ function write_commands(fname::String, coms::Vector{ImagineSignal}, nstacks::NS,
         push!(coms_used, all_las)
     end
     mons = get_missing_monitors(coms_used)
-    out_dict = initialize_outdict(rig, seq_lookup, which_cams, nstacks, nframes, exp_time, samprate(coms[1]), length(coms[1]), exp_trig_mode, isbidi)
+    out_dict = initialize_outdict(rig, seq_lookup, which_cams, nstacks, nframes_per_stack, exp_time, samprate(coms[1]), length(coms[1]), exp_trig_mode, isbidi)
     if !isempty(mons)
         print("Adding the following required monitors (inputs) to the command file: $(map(name, mons)) \n")
     end

@@ -55,17 +55,58 @@ d = gen_bidirectional_stack(pmin, pmax, z_spacing, stack_time, exp_time, sample_
 @test d["laser"] == vcat(samps_las_fwd, samps_las_back)
 @test d["nframes"] == length(exp_intervals_fwd) * 2
 
+#write it
+ocpi2 = rigtemplate("ocpi-2"; sample_rate = sample_rate)
+nstacks = 5
+pos = first(getpositioners(ocpi2))
+cam = first(getcameras(ocpi2))
+las = getname(ocpi2, "488nm laser")
+append!(pos, "pos", d["positioner"])
+append!(cam, "cam", d["camera"])
+append!(las, "las", d["laser"])
+nframes = d["nframes"]
+replicate!(pos, nstacks-1)
+replicate!(cam, nstacks-1)
+replicate!(las, nstacks-1)
+outname = splitext(tempname())[1] *".json"
+write_commands(outname, [cam;las;pos], nstacks, nframes, exp_time; isbidi = true)
+
+#read it back in
+_ocpi2 = parse_commands(outname)
+lasers = getlasers(_ocpi2)
+@test length(lasers) == 2
+las_all = getname(lasers, "all lasers") #should have been added automatically
+@test all(get_samples(las_all) .= true)
 
 ##################################UNIDIRECTIONAL STACK########################################
 #set reset time equal to stack time, so the piezo waveform should be the same as in the bidi test, with half of the frames
 posuni, posreset = gen_sawtooth(pmin, pmax, stack_time, stack_time, sample_rate)
 @test posuni == posfwd
 @test posreset == posback
-d2 = gen_unidirectional_stack(pmin, pmax, z_spacing, stack_time, stack_time, exp_time, sample_rate, flash_frac; z_pad = z_pad)
+flash_frac_ocpi1 = 1.1 #flashing per-exposure doesn't work well on ocpi1
+d2 = gen_unidirectional_stack(pmin, pmax, z_spacing, stack_time, stack_time, exp_time, sample_rate, flash_frac_ocpi1; z_pad = z_pad)
 @test length(posreset) == length(posback)
 @test length(find(x->x==1, diff(d2["camera"]))) == length(exp_intervals_fwd) #count pulses
-@test length(find(x->x==1, diff(d2["laser"]))) == length(exp_intervals_fwd) #count pulses
 @test d2["nframes"] == length(exp_intervals_fwd)
+
+#write it
+ocpi1 = rigtemplate("ocpi-1"; sample_rate = sample_rate)
+nstacks = 5
+pos = first(getpositioners(ocpi1))
+cam = first(getcameras(ocpi1))
+las = getname(ocpi1, "488nm laser shutter")
+append!(pos, "pos", d2["positioner"])
+append!(cam, "cam", d2["camera"])
+append!(las, "las", d2["laser"])
+nframes = d2["nframes"]
+replicate!(pos, nstacks-1)
+replicate!(cam, nstacks-1)
+replicate!(las, nstacks-1)
+outname = splitext(tempname())[1] *".json"
+write_commands(outname, [cam;las;pos], nstacks, nframes, exp_time; isbidi = false)
+
+#read it back in
+_ocpi1 = parse_commands(outname)
 
 #no piezo motion
 pset = 0.0 * Unitful.μm
@@ -75,4 +116,5 @@ d3 = gen_2d_timeseries(pset, 10, exp_time, inter_exp_time, sample_rate, flash_fr
 @test length(find(x->x==1, diff(d3["camera"]))) == 10
 @test length(find(x->x==1, diff(d3["laser"]))) == 10
 @test (exp_time + inter_exp_time) * 10 * sample_rate ≈ length(d3["camera"])
+
 

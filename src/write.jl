@@ -154,6 +154,15 @@ function write_commands(fname::String, coms::Vector{ImagineSignal}, nstacks::NS,
     print("...finished validating signals\n")
     rig = rig_name(first(coms_used))
     seq_lookup = combine_lookups(coms_used)
+    if rig == "ocpi-2" && findname(coms_used, "all lasers")==0
+        ref_sig = first(getoutputs(coms_used))
+        rt = rigtemplate("ocpi-2"; sample_rate = samprate(ref_sig))
+        all_las = getname(rt, "all lasers")
+        all_las.sequence_lookup = seq_lookup
+        append!(all_las, randstring(12), trues(length(ref_sig)))
+        check_laser(all_las)
+        push!(coms_used, all_las)
+    end
     mons = get_missing_monitors(coms_used)
     out_dict = initialize_outdict(rig, seq_lookup, which_cams, nstacks, nframes, exp_time, samprate(coms[1]), length(coms[1]), exp_trig_mode, isbidi)
     if !isempty(mons)

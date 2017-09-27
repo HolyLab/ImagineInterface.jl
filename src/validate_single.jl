@@ -70,36 +70,46 @@ function check_max_speed(raw_samps::Vector, raw_change::Int, in_n_samps::Int)
     return true
 end
 
-function check_pulse_changetime(start_is::Vector{Int}, stop_is::Vector{Int}, nsamps_on_tol::Int, nsamps_off_tol::Int)
+function check_pulse_duration(start_is::Vector{Int}, stop_is::Vector{Int}, nsamps_on_tol::Int, nsamps_off_tol::Int)
+    bad_i = 0
     if nsamps_on_tol > 0
         for i = 1:length(start_is)
             if stop_is[i] - start_is[i] + 1 < nsamps_on_tol
-                error("Pulse #$i has insufficient duration")
+                bad_i = i
+                return bad_i
             end
         end
     end
+    return bad_i
+end
+
+function check_interpulse_duration(start_is::Vector{Int}, stop_is::Vector{Int}, nsamps_on_tol::Int, nsamps_off_tol::Int)
+    bad_i = 0
     if nsamps_off_tol > 0
         for i = 1:(length(start_is) - 1)
             if start_is[i+1] - stop_is[i] - 1 < nsamps_off_tol
-                error("The interval between pulse #$i end and pulse #$(i+1) start is too small")
+                bad_i = i
+                return bad_i
             end
         end
     end
-    return true
+    return bad_i
 end
 
 #checks that the start-to-start time is within tolerance
 #also keeps track of the shortest start-to-start time
 function check_pulse_interval(start_is::Vector{Int}, nsamps_interval_tol::Int)
     shortest_width = typemax(Int)
+    bad_i = 0
     for i = 1:(length(start_is)-1)
         cur_width = start_is[i+1] - start_is[i]
         shortest_width = min(cur_width, shortest_width)
         if cur_width < nsamps_interval_tol
-            error("The interval between pulse #$i start and pulse #$(i+1) start is too small")
+            bad_i = i
+            return bad_i
         end
     end
-    return shortest_width
+    return bad_i #shortest_width
 end
 
 function check_pulses(sig::ImagineSignal, on_time::HasTimeUnits, off_time::HasTimeUnits, pulse_rate::HasInverseTimeUnits)
@@ -108,10 +118,20 @@ function check_pulses(sig::ImagineSignal, on_time::HasTimeUnits, off_time::HasTi
     stps = find_pulse_stops(sig)
     min_on_samps = ceil(Int, on_time * uconvert(inv(unit(on_time)), samprate(sig)))
     min_off_samps = ceil(Int, off_time * uconvert(inv(unit(off_time)), samprate(sig)))
-    check_pulse_changetime(strts, stps, min_on_samps, min_off_samps)
+    rslt = check_pulse_duration(strts, stps, min_on_samps, min_off_samps)
+    if rslt > 0
+        error("Pulse #$rslt of signal $(name(sig)) has insufficient duration")
+    end
+    rslt = check_interpulse_duration(strts, stps, min_on_samps, min_off_samps)
+    if rslt > 0
+        error("The interval between pulse #$rslt end and pulse #$(rslt+1) start of signal $(name(sig)) is too small")
+    end
     nsamps_start_to_start = ceil(Int, (1/pulse_rate) * uconvert(unit(pulse_rate), samprate(sig)))
     if !isinf(pulse_rate)
-        min_interval_width = check_pulse_interval(strts, nsamps_start_to_start)
+        rslt = check_pulse_interval(strts, nsamps_start_to_start)
+        if rslt > 0
+            error("The interval between pulse #$rslt start and pulse #$(rslt+1) start of signal $(name(sig)) is too small")
+        end
     end
     return true 
 end

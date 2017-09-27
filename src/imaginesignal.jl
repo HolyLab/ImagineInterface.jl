@@ -11,6 +11,8 @@ convert{T}(::Type{RepeatedValue{T}}, rv::RepeatedValue) = RepeatedValue{T}(rv.n,
 "RLEVector is a run-length encoded vector"
 const RLEVector{T} = Vector{RepeatedValue{T}}
 full_length{T}(vec::RLEVector{T}) = sum(map(count, vec))
+
+#convert to RLEVector
 # Use the first "real" value to infer the type. Not type-stable.
 convert(::Type{RLEVector}, v::AbstractVector) = isempty(v) ?
 convert(RLEVector{Any}, v) :
@@ -18,6 +20,19 @@ convert(RLEVector{typeof(v[2])}, v)
 convert{T}(::Type{RLEVector{T}}, v::RLEVector{T}) = v
 convert{T,S}(::Type{RLEVector{T}}, v::RLEVector{S}) = [convert(RepeatedValue{T}, rv) for rv in v]
 convert(::Type{RLEVector}, v::RLEVector) = v
+
+#convert from RLEVector
+function convert(::Type{Vector{T}}, v::RLEVector{T}) where {T}
+    output = fill(zero(T), full_length(v))
+    cur_start = 1
+    cur_stop = 1
+    for rv in v
+        cur_stop = cur_start + count(rv) - 1
+        output[cur_start:cur_stop] = value(rv)
+        cur_start = cur_stop + 1
+    end
+    return output
+end
 
 function convert{T,S}(::Type{RLEVector{T}}, v::AbstractVector{S})
     iseven(length(v)) || error("not a run-length encoded vector (length is odd)")
@@ -226,7 +241,7 @@ function get_samples_raw{T<:RLEVector}(com::ImagineSignal{T}, istart::Int, istop
     end
 
     iseq = 1 #index into the sequence vector
-    offset0 = 0
+    offset0 = 0 #offset of istart from the beginning of the sequence where istart occurs (always positive)
 
     #find the sequence containing istart
     if istart > com.cumlength[1]
@@ -255,6 +270,10 @@ function get_samples_raw{T<:RLEVector}(com::ImagineSignal{T}, istart::Int, istop
     end
     num_samps = istop - istart + 1
     output = zeros(rawtype(com), num_samps)
+    #skip RepeatedValues with 0 repeats
+    while count(seq[ival]) == 0
+        ival+=1
+    end
     #decompress num_samps samples beginning at istart
     so_far = 1
     output[so_far] = seq[ival].value #write first sample

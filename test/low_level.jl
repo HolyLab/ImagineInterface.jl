@@ -72,6 +72,42 @@ sampsd = get_samples(las1, 1, nsamps; sampmap=:volts)
 sampsd = get_samples(las1, 1, nsamps; sampmap=:raw)
 @test eltype(sampsd) == rawtype(las1) #UInt8 by default
 
+#allow 0-count RepeatedValues
+stim_com = getstimuli(rigtemplate("ocpi-2"; sample_rate = 5*Unitful.s^-1))[1]
+nsamps_on = nsamps_off = 2
+stim_on = RepeatedValue(nsamps_on, true)
+stim_off = RepeatedValue(nsamps_off, false)
+stim_0=RepeatedValue(0, false)
+
+#0-count first
+stim_vec = RepeatedValue{UInt8}[]
+push!(stim_vec,stim_0)
+push!(stim_vec, stim_on)
+push!(stim_vec, stim_off)
+v = convert(Vector{UInt8}, stim_vec)
+append!(stim_com, "on_off", stim_vec)
+@test ImagineInterface.get_samples_raw(stim_com, 1, length(stim_com)) == convert(Vector{UInt8}, stim_vec)
+
+#0-count middle
+empty!(stim_com; clear_library=true)
+stim_vec = RepeatedValue{UInt8}[]
+push!(stim_vec, stim_on)
+push!(stim_vec,stim_0)
+push!(stim_vec, stim_off)
+v = convert(Vector{UInt8}, stim_vec)
+append!(stim_com, "on_off", stim_vec)
+@test ImagineInterface.get_samples_raw(stim_com, 1, length(stim_com)) == convert(Vector{UInt8}, stim_vec)
+
+#0-count last
+empty!(stim_com; clear_library=true)
+stim_vec = RepeatedValue{UInt8}[]
+push!(stim_vec, stim_on)
+push!(stim_vec, stim_off)
+push!(stim_vec,stim_0)
+v = convert(Vector{UInt8}, stim_vec)
+append!(stim_com, "on_off", stim_vec)
+@test ImagineInterface.get_samples_raw(stim_com, 1, length(stim_com)) == convert(Vector{UInt8}, stim_vec)
+
 #this caught an off-by-one error
 _cam = getcameras(rigtemplate("ocpi-2"; sample_rate = 1000 * inv(Unitful.s)))[1]
 c = fill(UInt8(1), 10)

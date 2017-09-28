@@ -1,4 +1,5 @@
 using ImagineInterface, Unitful
+using Base.Test
 
 ##################################BIDIRECTIONAL STACK########################################3
 sample_rate = 50000*Unitful.s^-1
@@ -70,6 +71,9 @@ replicate!(cam, nstacks-1)
 replicate!(las, nstacks-1)
 outname = splitext(tempname())[1] *".json"
 write_commands(outname, [cam;las;pos], nstacks, nframes, exp_time; isbidi = true)
+#should throw an error when passed the wrong number of stacks/frames
+@test_throws Exception write_commands(outname, [cam;las;pos], nstacks+1, nframes, exp_time; isbidi = true)
+@test_throws Exception write_commands(outname, [cam;las;pos], nstacks, nframes+1, exp_time; isbidi = true)
 
 #read it back in
 _ocpi2 = parse_commands(outname)

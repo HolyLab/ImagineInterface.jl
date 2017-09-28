@@ -14,6 +14,10 @@ ao_coms = getoutputs(getanalog(o_coms))
 di_coms = getinputs(getdigital(o_coms))
 ai_coms = getinputs(getanalog(o_coms))
 
+#test show
+show(IOBuffer(), first(ai_coms))
+show(IOBuffer(), first(di_coms))
+
 @test length(di_coms) == length(di_recs)
 @test length(ai_coms) == length(ai_recs)
 

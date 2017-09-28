@@ -24,6 +24,9 @@ sample_rate = d[METADATA_KEY]["samples per second"]
 rig = d[METADATA_KEY]["rig"]
 @test rig_name(pos) == rig
 
+#show
+show(IOBuffer(), pos)
+
 allcoms = parse_commands(fname)
 cam = getcameras(allcoms)[1]
 camid = name(cam)
@@ -33,12 +36,16 @@ nframes = d[METADATA_KEY][camid]["frames per stack"]
 nstacks = d[METADATA_KEY][camid]["stacks"]
 @test nframes*nstacks == count_pulses(cam)
 
+
 #digital
 nm = "488nm laser shutter"
 las1 = getname(allcoms, nm)
 @test isdigital(las1) == true
 @test name(las1) == nm
 @test length(las1) == nsamps
+
+#show
+show(IOBuffer(), las1)
 
 #decompression
 #world-mapped, analog
@@ -66,11 +73,23 @@ sampsa = get_samples(pos, 1, nsamps; sampmap=:raw)
 sampsd = get_samples(las1, 1, nsamps; sampmap=:world)
 @test length(sampsd) == nsamps
 
+sampsdsub = get_samples(las1, 50000, 100000; sampmap=:world)
+@test all(sampsdsub.==sampsd[50000:100000])
+
 sampsd = get_samples(las1, 1, nsamps; sampmap=:volts)
 @test unit(sampsd[1]) == Unitful.V
 
 sampsd = get_samples(las1, 1, nsamps; sampmap=:raw)
 @test eltype(sampsd) == rawtype(las1) #UInt8 by default
+
+#time-based indexing
+sampsd = get_samples(las1, 1, nsamps; sampmap=:world)
+subsamps = get_samples(las1, 0.0*Unitful.s, 0.0*Unitful.s)
+@test length(subsamps) == 1
+@test subsamps[1] == sampsd[1]
+subsamps = get_samples(las1, 0.0*Unitful.s, 0.1*Unitful.s)
+@test all(sampsd[1:500].==subsamps[1:500])
+@test get_samples(las1, 0.0049*Unitful.s, 0.0050*Unitful.s) == [false, false, false, false, false, true]
 
 #allow 0-count RepeatedValues
 stim_com = getstimuli(rigtemplate("ocpi-2"; sample_rate = 5*Unitful.s^-1))[1]
@@ -175,7 +194,10 @@ dat = get_samples(pos, "ramp_up")
 @test dat[1] == mapper(pos).worldmin
 @test dat[end] == mapper(pos).worldmax
 append!(pos, "ramp_up") #append existing
-@test length(pos) == 2*typemax(Int16)+2
+@test_throws Exception append!(pos, "alajvekaj") #does not exist
+@test_throws Exception add_sequence!(pos, "ramp_up", rawdat) #cannot add because exists
+lpos = length(pos)
+@test lpos == 2*typemax(Int16)+2
 
 #append! already compressed
 stim1 = getstimuli(ocpi2)[1]
@@ -213,6 +235,7 @@ rename!(c, nm)
 #replace!
 rawdat2 = Int16[typemax(Int16):-1:0...]
 replace!(pos, "ramp_up", rawdat2)
+@test_throws Exception replace!(pos, "alkjbroaj", rawdat2) #error because sequence does not exist
 dat = get_samples(pos, "ramp_up")
 @test dat[end] == mapper(pos).worldmin
 @test dat[1] == mapper(pos).worldmax
@@ -250,3 +273,8 @@ dat = get_samples(pos, "ramp_up")
 @test dat[1] == mapper(pos).worldmin
 @test dat[end] == mapper(pos).worldmax
 
+lpos = length(pos)
+append!(pos, "ramp_up2", newdat[1:5])
+append!(pos, "ramp_up2") #append existing, not the first sequence
+@test length(pos) == lpos + 10
+@test all(get_samples(pos, "ramp_up2") .== get_samples(pos)[lpos+6:end])

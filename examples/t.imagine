@@ -13,7 +13,7 @@ ai data file=f:/test/t1.ai
 image data file=f:/test/t1.cam
 command file=
 di data file=f:/test/t1.di
-piezo=start position: 100 um;stop position: 400 um;output scan rate: 50000;bidirection: 0
+piezo=start position: 100 um;stop position: 400 um;output scan rate: 50000
 
 [ai]
 nscans=-1
@@ -53,3 +53,4 @@ camera=edge.main
 um per pixel=-1
 binning=hbin:1;vbin:1;hstart:1;hend:2560;vstart:1;vend:2160
 angle from horizontal (deg)=-1
+bidirectional=0

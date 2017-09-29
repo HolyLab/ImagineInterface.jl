@@ -162,6 +162,7 @@ allcoms2 = parse_commands(outname)
 d2 = JSON.parsefile(outname)
 @test d2["version"] == "v1.1"
 @test d2[METADATA_KEY]["camera1"]["exposure trigger mode"] == "External Start"
+@test d2[METADATA_KEY]["camera1"]["bidirectional"] == false
 
 sp = sortperm(map(name,allcoms)) #sort alphabetically to compare
 sp2 = sortperm(map(name,allcoms2))

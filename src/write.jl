@@ -62,7 +62,6 @@ function initialize_outdict{TTI<:HasInverseTimeUnits}(rig::String, seq_lookup::D
     sampr = ustrip(uconvert(Unitful.s^-1, samp_rate))
     @assert isa(sampr, Integer) #TODO: Check for samprate beyond DAQ's capability
     out_dict[METADATA_KEY] = Dict("samples per second" => sampr,
-                                            "bi-direction" => isbidi,
                                             "sample num" => nsamps,
                                             "rig" => rig,
                                             "generated from" => "ImagineInterface")
@@ -76,6 +75,7 @@ function initialize_outdict{TTI<:HasInverseTimeUnits}(rig::String, seq_lookup::D
         camdict["stacks"] = nstacks[min(i, length(nstacks))]
         camdict["exposure time in seconds"] = ustrip(uconvert(Unitful.s, exp_time[min(i, length(exp_time))]))
         camdict["exposure trigger mode"] = exp_trig_mode[min(i, length(nstacks))]
+        camdict["bidirectional"] = isbidi[min(i, length(nstacks))]
     end
     out_dict["version"] = "v1.1"
     return out_dict
@@ -148,7 +148,7 @@ function check_cam_meta(coms::Vector{ImagineSignal}, nstacks, nframes_per_stack,
     return which_cams
 end
 
-function write_commands(fname::String, coms::Vector{ImagineSignal}, nstacks::NS, nframes_per_stack::NF, exp_time::EXP; exp_trig_mode = ["External Start";], isbidi::Bool=false) where {NS <: Union{Int, Vector{Int}}, NF <: Union{Int, Vector{Int}}, EXP <: Union{HasTimeUnits, Vector{HasTimeUnits}}}
+function write_commands(fname::String, coms::Vector{ImagineSignal}, nstacks::NS, nframes_per_stack::NF, exp_time::EXP; exp_trig_mode = ["External Start";], isbidi=false) where {NS <: Union{Int, Vector{Int}}, NF <: Union{Int, Vector{Int}}, EXP <: Union{HasTimeUnits, Vector{HasTimeUnits}}}
     @assert splitext(fname)[2] == ".json"
     if isa(exp_trig_mode, AbstractString)
         exp_trig_mode = [exp_trig_mode;]

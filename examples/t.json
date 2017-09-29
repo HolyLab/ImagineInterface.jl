@@ -37,7 +37,7 @@
         }
     },
     "metadata": {
-        "bi-direction": false,
+        "bidirectional": false,
         "camera1": {
             "exposure time in seconds": 0.03,
             "exposure trigger mode": "External Start",

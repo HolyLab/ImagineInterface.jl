@@ -82,7 +82,12 @@ function parse_ai(ai_name, chns, labels, rig, sample_rate::HasInverseTimeUnits)
     incoms = getanalog(getinputs(tmp))
     aitype = rawtype(incoms[1])
     nbytes = filesize(ai_name)
-    nsamples = convert(Int,nbytes/nchannels/sizeof(aitype))
+    nsamples = nbytes/nchannels/sizeof(aitype)
+    if !isapprox(nsamples, round(Int, nsamples))
+        error("The .ai file doesn't have the correct number of samples.  The recording may have been interrupted.")
+    else
+        nsamples = round(Int, nsamples)
+    end
     f = open(ai_name, "r")
     A = Mmap.mmap(f, Matrix{aitype}, (nchannels,nsamples))
 

@@ -304,6 +304,17 @@ function add_sequence!{T<:RLEVector, TS}(com::ImagineSignal{T}, seqname::String,
     add_sequence!(com, seqname, cseq)
 end
 
+#This gets called for input signals
+function add_sequence!{T, TS}(sig::ImagineSignal{T}, seqname::String, sequence::TS)
+    seqdict = sequence_lookup(sig)
+    @assert length(sequence) >= 1
+    if haskey(seqdict, seqname)
+        error("A sequence by this name exists.  If you want to replace the existing sequence, use the replace! function")
+    else
+        seqdict[seqname] = sequence
+    end
+end
+
 function add_sequence!{T<:RLEVector}(com::ImagineSignal{T}, seqname::String, sequence::T)
     seqdict = sequence_lookup(com)
     @assert full_length(sequence) >= 1
@@ -314,7 +325,7 @@ function add_sequence!{T<:RLEVector}(com::ImagineSignal{T}, seqname::String, seq
     end
 end
 
-function append!{T<:RLEVector}(com::ImagineSignal{T}, seqname::String)
+function append!(com::ImagineSignal{T}, seqname::String) where {T<:RLEVector}
     seqdict = sequence_lookup(com)
     if !haskey(seqdict, seqname)
         error("The requested sequence name was not found.  You most first add the sequence with add_sequence!(com, seqname, sequence), or instead you can add it and append it at the same time with append!(com, seqname, sequence)")
@@ -338,9 +349,23 @@ function append!{T<:RLEVector}(com::ImagineSignal{T}, seqname::String)
     return com
 end
 
+append!(com::ImagineSignal{T}, seqlist::V) where {T<:RLEVector, V<:AbstractVector{String}} = foreach(x->append!(com,x), seqlist)
+
+#this one gets called when appending to input signals
+function append!{T, TS}(com::ImagineSignal{T}, seqname::String, sequence::AbstractVector{TS})
+    warn("You are appending to an input signal.  This can be useful for testing, but it does not influence the operation of Imagine.")
+    @assert length(sequence) >= 1
+    rawseq = mapped2raw(sequence, mapper(com))[:]
+    add_sequence!(com, seqname, rawseq)
+    push!(sequences(com), rawseq)
+    push!(sequence_names(com), seqname)
+    push!(cumlength(com), length(com) + length(rawseq))
+    return com
+end
+
 function append!{T<:RLEVector, TS}(com::ImagineSignal{T}, seqname::String, sequence::AbstractVector{TS})
-        cseq = compress(sequence, mapper(com))
-        return append!(com, seqname, cseq)
+    cseq = compress(sequence, mapper(com))
+    return append!(com, seqname, cseq)
 end
 
 function append!{T<:RLEVector}(com::ImagineSignal{T}, seqname::String, sequence::T)

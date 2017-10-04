@@ -131,6 +131,7 @@ export gen_sweep,
         scale,
         gen_bidirectional_stack,
         gen_unidirectional_stack,
+        gen_stepped_stack,
         gen_2d_timeseries
 #deprecations
 @deprecate ImagineCommand ImagineSignal

@@ -370,14 +370,18 @@ function pop!{T<:RLEVector}(com::ImagineSignal{T})
     return seq
 end
 
-function empty!{T<:RLEVector}(com::ImagineSignal{T}; clear_library = false)
-    empty!(com.cumlength)
-    empty!(com.sequence_names)
-    empty!(com.sequences)
+#for both output and input (recorded) signals
+function empty!(sig::ImagineSignal{T}; clear_library = false) where {T}
+    empty!(sig.cumlength)
+    empty!(sig.sequences)
     if clear_library
-        empty!(com.sequence_lookup)
+        lookup = sig.sequence_lookup
+        for k in sequence_names(sig)
+            delete!(lookup, k)
+        end
     end
-    return com
+    empty!(sig.sequence_names)
+    return sig
 end
 
 function replace!{T<:RLEVector, TS}(com::ImagineSignal{T}, seqname::String, sequence::AbstractVector{TS})

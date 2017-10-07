@@ -135,14 +135,31 @@ function gen_bidirectional_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasI
     #offset by one sample going forward so that we don't use the end points of the triangle
     delay1samp = 1/sample_rate
 
-    exp_intervals_fwd = spaced_intervals(posfwd, z_spacing, exp_time, sample_rate; delay=delay1samp, z_pad = z_pad, alignment=:start, rig=rig)
-    exp_intervals_back = spaced_intervals(posback, z_spacing, exp_time, sample_rate; delay=0.0*Unitful.s, z_pad = z_pad, alignment=:stop, rig=rig)
+    #We want the cameras to reach the global exposure state at the same time for each pulse in forward and reverse stacks, so we
+    #don't line up the pulses exactly.  Assuming that the exposure is one las_frac's duration longer than the minimum exposure time for the given
+    #should really put some more work into making this modular and adaptable to different exposure times / ROI sizes / line times /cameras
+    #For now we deliver the flash at the end of the exposure pulse, and we align the forward and reverse stacks to the flash (not to the exposure)
+    #Therefor it's up to the user to make sure the exposure time and ROI size combination is long enough that the flash fits within the global
+    #exposure period (see PCO.Edge manual for more details)
+
+    #distance traveled in one exposure time.  We need to adjust padding by that much to make sure that exposures can fit.
+    exp_dist = exp_time * abs(pmax - pmin) / stack_time
+    if exp_dist > z_pad
+        warn("Increasing z padding by $(exp_dist-z_pad) to leave space for bidirectional exposures\n")
+    end
+    exp_intervals_fwd = spaced_intervals(posfwd, z_spacing, exp_time, sample_rate; delay=delay1samp, z_pad = max(z_pad,exp_dist), alignment=:start, rig=rig)
+    flash_nsamps = calc_num_samps(min(flash_frac,1.0) * exp_time, sample_rate)
+    exp_nsamps = width(exp_intervals_fwd[1]) + 1
+    offset_nsamps = exp_nsamps - flash_nsamps
+    #The extra -1 is needed since the forward direction does not sample the last point (the first index in the reverse direction)
+    exp_intervals_back = map(x-> ClosedInterval(length(posfwd)-(maximum(x)+offset_nsamps-2), length(posfwd)-(maximum(x)-flash_nsamps-1)), exp_intervals_fwd)
+#    exp_intervals_back = spaced_intervals(posback, z_spacing, exp_time, sample_rate; delay=0.0*Unitful.s, z_pad = z_pad, alignment=:stop, rig=rig)
     
     if flash
-        las_intervals_fwd = map(x->scale(x, flash_frac), exp_intervals_fwd)
+        las_intervals_fwd = map(x-> ClosedInterval(maximum(x)-flash_nsamps+1, maximum(x)), exp_intervals_fwd)
         lasfwd = gen_pulses(nsamps_stack, las_intervals_fwd)
-        #samps_las_back = gen_pulses(nsamps_stack, las_intervals_back) #this can be off-by-one sample due to rounding in the scale function
-        lasback = reverse(circshift(lasfwd,-1)) 
+        las_intervals_back = map(x-> ClosedInterval(maximum(x)-flash_nsamps+1, maximum(x)), exp_intervals_back)
+        lasback = gen_pulses(nsamps_stack, las_intervals_back)
     else
         lasfwd = fill(true, length(posfwd))
         lasback = fill(true, length(posback))
@@ -151,7 +168,7 @@ function gen_bidirectional_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasI
     camfwd = gen_pulses(nsamps_stack, exp_intervals_fwd)
     camback = gen_pulses(nsamps_stack, exp_intervals_back)
     if alternate_cameras
-        output = Dict("positioner" => vcat(posfwd, posback), 
+        output = Dict("positioner" => vcat(posfwd, posback),
                     "camera_fwd" => vcat(camfwd, fill(false, length(camback))),
                     "camera_back" => vcat(fill(false, length(camfwd)), camback),
                     "laser_fwd" => vcat(lasfwd, fill(false, length(lasback))),
@@ -220,7 +237,8 @@ function gen_stepped_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverse
     camfwd = gen_pulses(nsamps_stack, exp_intervals)
     #laser pulse intervals
     if flash
-        las_intervals = map(x->scale(x, flash_frac), exp_intervals)
+        pulse_nsamps = calc_num_samps(flash_frac * exp_time, sample_rate)
+        las_intervals = map(x-> ClosedInterval(maximum(x)-pulse_nsamps+1, maximum(x)), exp_intervals)
         lasfwd = gen_pulses(nsamps_stack, las_intervals)
     else
         lasfwd = fill(true, nsamps_stack)
@@ -260,7 +278,8 @@ function gen_unidirectional_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:Has
     exp_intervals = spaced_intervals(posfwd, z_spacing, exp_time, sample_rate; z_pad = z_pad, alignment=:start, rig=rig)
     
     if flash
-        las_intervals = map(x->scale(x, flash_frac), exp_intervals)
+        pulse_nsamps = calc_num_samps(flash_frac * exp_time, sample_rate)
+        las_intervals = map(x-> ClosedInterval(maximum(x)-pulse_nsamps+1, maximum(x)), exp_intervals)
         lasfwd = gen_pulses(nsamps_stack, las_intervals)
     else
         lasfwd = fill(true, length(posfwd))
@@ -287,7 +306,8 @@ function gen_2d_timeseries{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverse
         exp_intervals[i] = ClosedInterval(curstart, curstart+exp_samps-1)
         curstart += cycle_samps
     end
-    las_intervals = map(x->scale(x, flash_frac), exp_intervals)
+    pulse_nsamps = calc_num_samps(flash_frac * exp_time, sample_rate)
+    las_intervals = map(x-> ClosedInterval(maximum(x)-pulse_nsamps+1, maximum(x)), exp_intervals)
     cam = gen_pulses(nsamps, exp_intervals)
     las = gen_pulses(nsamps, las_intervals)
     output = Dict("positioner" => pos, "camera" => cam, "laser" => las)

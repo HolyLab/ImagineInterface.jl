@@ -111,11 +111,10 @@ function parse_ai{T}(A::Matrix{T}, chns, labels, rig, sample_rate::HasInverseTim
         end
         com = incoms[comi]
         samps = view(A, i, :)
-        vectyp = typeof(samps)
-        sampsarr = Array{vectyp}(0)
+        sampsarr = Array{AbstractVector}(0)
         push!(sampsarr, samps)
         lookup_nm = string(hash(chns[i]))
-        mon = ImagineSignal{vectyp}(labels[i], chns[i], rig, sampsarr, [lookup_nm;], Dict(lookup_nm=>samps), [length(samps);], mapper(com))
+        mon = ImagineSignal{AbstractVector}(labels[i], chns[i], rig, sampsarr, [lookup_nm;], Dict{String,Any}(lookup_nm=>samps), [length(samps);], mapper(com))
         push!(output, mon)
     end
     return output
@@ -189,12 +188,11 @@ function parse_di(di_name, rig, sample_rate::HasInverseTimeUnits)
         daq_chan_str = daq_channel(sig)
         biti = findfirst(x->x==daq_chan_str, DI_CHANS[rig])
         samps = view(A, biti, :)
-        vectyp = typeof(samps)
-        sampsarr = Array{vectyp}(0)
+        sampsarr = Array{AbstractVector}(0)
         push!(sampsarr, samps)
         lookup_nm = string(hash(daq_chan_str))
         mpr = SampleMapper(false, true, 0.0*Unitful.V, 3.3*Unitful.V, false, true, sample_rate) #unlike for outputs, the raw type is Bool
-        mon = ImagineSignal{vectyp}(name(sig), daq_chan_str, rig, sampsarr, [lookup_nm;], Dict(lookup_nm=>samps), [length(samps);], mpr)
+        mon = ImagineSignal{AbstractVector}(name(sig), daq_chan_str, rig, sampsarr, [lookup_nm;], Dict{String,Any}(lookup_nm=>samps), [length(samps);], mpr)
         push!(output, mon)
     end
     return output

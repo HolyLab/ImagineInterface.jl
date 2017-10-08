@@ -258,8 +258,9 @@ dat = get_samples(pos, "ramp_up")
 empty!(pos)
 @test length(pos) == 0
 @test length(sequence_lookup(pos)) != 0
+append!(pos, "ramp_up")
 empty!(pos; clear_library=true)
-@test length(sequence_lookup(pos)) == 0
+@test !haskey(sequence_lookup(pos), "ramp_up")
 
 #append! volts and world units
 newdat = Unitful.V * [0.0:0.1:10.0...]

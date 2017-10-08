@@ -82,7 +82,12 @@ function parse_ai(ai_name, chns, labels, rig, sample_rate::HasInverseTimeUnits)
     incoms = getanalog(getinputs(tmp))
     aitype = rawtype(incoms[1])
     nbytes = filesize(ai_name)
-    nsamples = convert(Int,nbytes/nchannels/sizeof(aitype))
+    nsamples = nbytes/nchannels/sizeof(aitype)
+    if !isapprox(nsamples, round(Int, nsamples))
+        error("The .ai file doesn't have the correct number of samples.  The recording may have been interrupted.")
+    else
+        nsamples = round(Int, nsamples)
+    end
     f = open(ai_name, "r")
     A = Mmap.mmap(f, Matrix{aitype}, (nchannels,nsamples))
 
@@ -155,7 +160,11 @@ function parse_di(di_name, chns, labels, rig, sample_rate::HasInverseTimeUnits; 
     #assign labels to di_sigs
     for i = 1:length(chns)
         sig = getdaqchan(di_sigs, chns[i])
-        rename!(sig, String(labels[i]))
+        if isfree(sig)
+            rename!(sig, String(labels[i]))
+        elseif String(labels[i]) != name(sig) && labels[i] != "unused"
+            warn("The name $(String(labels[i])) was provided for a di channel that cannot be renamed.  Defaulting to its allowed name")
+        end
         if labels[i] != "unused"
             push!(di_sigs_used, sig)
         end

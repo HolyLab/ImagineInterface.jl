@@ -21,12 +21,14 @@ findanalog{T<:ImagineSignal}(coms::AbstractVector{T}) = find(x->!isdigital(x), c
 getanalog{T<:ImagineSignal}(coms::AbstractVector{T}) = view(coms, findanalog(coms))
 
 isoutput{T<:ImagineSignal}(com::T)  = isoutput(daq_channel(com), rig_name(com))
+isinput{T<:ImagineSignal}(com::T)  = !isoutput(com)
 findoutputs{T<:ImagineSignal}(coms::AbstractVector{T}) = find(x->isoutput(x), coms)
 getoutputs{T<:ImagineSignal}(coms::AbstractVector{T}) = view(coms, findoutputs(coms))
-findinputs{T<:ImagineSignal}(coms::AbstractVector{T}) = find(x->!isoutput(x), coms)
+findinputs{T<:ImagineSignal}(coms::AbstractVector{T}) = find(x->isinput(x), coms)
 getinputs{T<:ImagineSignal}(coms::AbstractVector{T}) = view(coms, findinputs(coms))
 
 isfree{T<:ImagineSignal}(com::T)  = isfree(daq_channel(com), rig_name(com))
+isfixed{T<:ImagineSignal}(com::T)  = !isfree(com)
 findfree{T<:ImagineSignal}(coms::AbstractVector{T}) = find(x->isfree(x), coms)
 getfree{T<:ImagineSignal}(coms::AbstractVector{T}) = view(coms, findfree(coms))
 findfixed{T<:ImagineSignal}(coms::AbstractVector{T}) = find(x->!isfree(x), coms)

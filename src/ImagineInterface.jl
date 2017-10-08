@@ -31,18 +31,9 @@ include("validate_single.jl")
 include("write.jl")
 include("stack.jl")
 
-#hardware_constants.jl
+#metadata_constants.jl
 export chip_size,
-        max_framerate,
-        isfree,
-        isdigital,
-        isoutput
-        ispos,
-        isposmonitor,
-        iscam,
-        iscammonitor,
-        islas,
-        isstim
+        max_framerate
 
 #imaginecommand.jl
 export RepeatedValue,
@@ -74,7 +65,18 @@ export RepeatedValue,
 export rigtemplate
 
 #convenience.jl
-export getname,
+export  isfree,
+        isdigital,
+        isanalog,
+        isoutput,
+        isinput,
+        ispos,
+        isposmonitor,
+        iscam,
+        iscammonitor,
+        islas,
+        isstim,
+        getname,
         getdigital,
         getanalog,
         getinputs,
@@ -129,6 +131,7 @@ export gen_sweep,
         scale,
         gen_bidirectional_stack,
         gen_unidirectional_stack,
+        gen_stepped_stack,
         gen_2d_timeseries
 #deprecations
 @deprecate ImagineCommand ImagineSignal

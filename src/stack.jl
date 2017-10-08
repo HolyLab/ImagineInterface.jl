@@ -23,6 +23,12 @@ function gen_sweep(pmin::HasLengthUnits, pmax::HasLengthUnits, tsweep::HasTimeUn
     return Ranges.linspace(pminum, pmaxum-increment, nsamps)
 end
 
+#moves at 90% of maximum safe speed from pmin to pmax
+function gen_safe_sweep(pmin::HasLengthUnits, pmax::HasLengthUnits, sample_rate::HasInverseTimeUnits, rig::AbstractString)
+    safe_tsweep = abs(pmax - pmin) / (.90 * PIEZO_MAX_SPEED[rig])
+    return gen_sweep(pmin, pmax, safe_tsweep, sample_rate)
+end
+
 #Generate sets of samples describing the motion of the positioner during one stack
 function gen_sawtooth(pmin::HasLengthUnits, pmax::HasLengthUnits, tfwd::HasTimeUnits, treset::HasTimeUnits, sample_rate::HasInverseTimeUnits)
     fwd_linspace = gen_sweep(pmin, pmax, tfwd, sample_rate)
@@ -157,6 +163,75 @@ function gen_bidirectional_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasI
         return output
     end
 end
+
+function gen_stepped_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverseTimeUnits}(pmin::TL, pmax::TL, z_spacing::TL, pause_time::TT, reset_time::TT, exp_time::TT, sample_rate::TTI, flash_frac::Real; rig="ocpi-2")
+    if exp_time > pause_time
+        error("Pause duration must be greater than or equal to exposure duration")
+    end
+    if pmin == pmax
+        error("Use the gen_2d_timeseries function instead of setting pmin and pmax to the same value")
+    end
+    flash = true
+    if flash_frac > 1
+        warn("las_frac was set greater than 1, so defaulting to keeping laser on throughout the stack")
+        flash = false
+    elseif flash_frac <= 0
+        error("las_frac must be positive")
+    end
+
+    pmin = uconvert(Unitful.μm, pmin)
+    pmax = uconvert(Unitful.μm, pmax)
+    z_spacing = uconvert(Unitful.μm, z_spacing)
+
+    pause_time = uconvert(Unitful.s, pause_time)
+    exp_time = uconvert(Unitful.s, exp_time)
+    sample_rate = uconvert(inv(Unitful.s), sample_rate)
+
+    curmin = curmax = pmin
+    prng = pmax - pmin
+    nslices = floor(Int, prng / z_spacing)+1
+    pause_starts = Int[]
+    pause_stops = Int[]
+    posfwd = typeof(curmin)[]
+    for i = 1:(nslices-1)
+        push!(pause_starts, length(posfwd)+1)
+        cur_pause = gen_sweep(curmax, curmax, pause_time, sample_rate)
+        append!(posfwd, cur_pause)
+        curmin = curmax
+        curmax = curmax + z_spacing
+        push!(pause_stops, length(posfwd))
+        cur_sweep = gen_safe_sweep(curmin, curmax, sample_rate,rig)
+        append!(posfwd, cur_sweep)
+    end
+    #final pause
+    push!(pause_starts, length(posfwd)+1)
+    append!(posfwd, gen_sweep(curmax, curmax, pause_time, sample_rate))
+    nsamps_stack = length(posfwd)
+    push!(pause_stops, nsamps_stack)
+    #camera pulse intervals
+    exp_intervals = Array{ClosedInterval{Int}}(nslices)
+    pause_nsamps = pause_stops[1] - pause_starts[1]
+    exp_nsamps = calc_num_samps(exp_time, sample_rate)
+    samp_offset = floor(Int, (pause_nsamps - exp_nsamps) / 2) #center the exposure within the positioner pause
+    for i = 1:nslices
+        exp_start = pause_starts[i] + samp_offset
+        exp_intervals[i] = ClosedInterval(exp_start, exp_start+exp_nsamps-1)
+    end
+    camfwd = gen_pulses(nsamps_stack, exp_intervals)
+    #laser pulse intervals
+    if flash
+        las_intervals = map(x->scale(x, flash_frac), exp_intervals)
+        lasfwd = gen_pulses(nsamps_stack, las_intervals)
+    else
+        lasfwd = fill(true, nsamps_stack)
+    end
+    #reset
+    posreset = gen_sweep(curmax, pmin, reset_time, sample_rate)
+    reset_digi = fill(false, length(posreset))
+    output = Dict("positioner" => vcat(posfwd, posreset), "camera" => vcat(camfwd, reset_digi), "laser" => vcat(lasfwd, reset_digi), "nframes" => length(exp_intervals))
+    return output
+end
+
 
 function gen_unidirectional_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverseTimeUnits}(pmin::TL, pmax::TL, z_spacing::TL, stack_time::TT, reset_time::TT, exp_time::TT, sample_rate::TTI, flash_frac::Real; z_pad::TL = 1.0*Unitful.μm, rig="ocpi-2")
     if pmin == pmax

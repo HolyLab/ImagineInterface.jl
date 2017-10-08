@@ -112,7 +112,31 @@ write_commands(outname, [cam;las;pos], nstacks, nframes, exp_time; isbidi = fals
 #read it back in
 _ocpi1 = parse_commands(outname)
 
-#no piezo motion
+##################################STEPPED UNIDIRECTIONAL STACK########################################
+#set reset time equal to stack time, so the piezo waveform should be the same as in the bidi test, with half of the frames
+pause_time = exp_time + 0.1 * Unitful.s
+flash_frac_ocpi1 = 1.1 #flashing per-exposure doesn't work well on ocpi1
+d2 = gen_stepped_stack(pmin, pmax, z_spacing, pause_time, stack_time, exp_time, sample_rate, flash_frac_ocpi1)
+
+#write it
+ocpi1 = rigtemplate("ocpi-1"; sample_rate = sample_rate)
+nstacks = 5
+pos = first(getpositioners(ocpi1))
+cam = first(getcameras(ocpi1))
+las = getname(ocpi1, "488nm laser shutter")
+append!(pos, "pos", d2["positioner"])
+append!(cam, "cam", d2["camera"])
+append!(las, "las", d2["laser"])
+nframes = d2["nframes"]
+replicate!(pos, nstacks-1)
+replicate!(cam, nstacks-1)
+replicate!(las, nstacks-1)
+outname = splitext(tempname())[1] *".json"
+write_commands(outname, [cam;las;pos], nstacks, nframes, exp_time; isbidi = false)
+#read it back in
+_ocpi1 = parse_commands(outname)
+
+########################### NO PIEZO MOTION ########################
 pset = 0.0 * Unitful.μm
 inter_exp_time = 0.0001 * Unitful.s #The time between exposure pulses
 d3 = gen_2d_timeseries(pset, 10, exp_time, inter_exp_time, sample_rate, flash_frac)

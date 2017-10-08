@@ -154,6 +154,14 @@ end
 
 recalculate_cumlength!(com) = calc_cumlength!(com.cumlength, sequences(com))
 
+mapped2raw{Traw, TV, TW}(seq::AbstractVector{Traw}, mapper::SampleMapper{Traw, TV, TW}) = mappedarray(bounds_check(mapper), seq)
+#Digital signals use the same types for raw and world samples, so no need to map them
+mapped2raw{Traw, TV}(seq::AbstractVector{Traw}, mapper::SampleMapper{Traw, TV, Traw}) = mappedarray(bounds_check(mapper), seq)
+mapped2raw{Traw, TV1, TV2<:HasVoltageUnits, TW}(seq::AbstractVector{TV2}, mapper::SampleMapper{Traw, TV1, TW}) = mappedarray(volts2raw(mapper), seq)
+mapped2raw{Traw, TV, TW}(seq::AbstractVector{TW}, mapper::SampleMapper{Traw, TV, TW}) = mappedarray(world2raw(mapper), seq)
+#attempt conversion when Quantity types don't exactly match (Float32 vs Float64 precision, for example)
+mapped2raw{Traw, TV, TW, T}(seq::AbstractVector{T}, mapper::SampleMapper{Traw, TV, TW}) = mapped2raw(map(x->convert(TW, x), seq), mapper)
+
 function compress!{T}(output::RLEVector{T}, input::AbstractVector{T})
     if isempty(input)
         return output
@@ -172,18 +180,13 @@ function compress!{T}(output::RLEVector{T}, input::AbstractVector{T})
     push!(output, RepeatedValue(count, input[end]))
     return output
 end
+
 function compress{T}(input::AbstractVector{T})
     output = Vector{RepeatedValue{T}}(0)
     return compress!(output, input)
 end
 compress(input::RLEVector) = input
-compress{Traw, TV, TW}(seq::AbstractVector{Traw}, mapper::SampleMapper{Traw, TV, TW}) = compress!(RepeatedValue{Traw}[], mappedarray(bounds_check(mapper), seq))
-#Digital signals use the same types for raw and world samples, so no need to map them
-compress{Traw, TV}(seq::AbstractVector{Traw}, mapper::SampleMapper{Traw, TV, Traw}) = compress!(RepeatedValue{Traw}[], mappedarray(bounds_check(mapper), seq))
-compress{Traw, TV1, TV2<:HasVoltageUnits, TW}(seq::AbstractVector{TV2}, mapper::SampleMapper{Traw, TV1, TW}) = compress!(RepeatedValue{Traw}[], mappedarray(volts2raw(mapper), seq))
-compress{Traw, TV, TW}(seq::AbstractVector{TW}, mapper::SampleMapper{Traw, TV, TW}) = compress!(RepeatedValue{Traw}[], mappedarray(world2raw(mapper), seq))
-#attempt conversion when Quantity types don't exactly match (Float32 vs Float64 precision, for example)
-compress{Traw, TV, TW, T}(seq::AbstractVector{T}, mapper::SampleMapper{Traw, TV, TW}) = compress(map(x->convert(TW, x), seq), mapper)
+compress(seq::V, mapper::SampleMapper{Traw, TV, TW}) where {Traw, TV, TW, V<:AbstractVector} = compress!(RepeatedValue{Traw}[], mapped2raw(seq, mapper))
 
 function get_samples(com::ImagineSignal, tstart::HasTimeUnits, tstop::HasTimeUnits; sampmap=:world)
     tstart = uconvert(unit(inv(samprate(com))), tstart)
@@ -301,6 +304,17 @@ function add_sequence!{T<:RLEVector, TS}(com::ImagineSignal{T}, seqname::String,
     add_sequence!(com, seqname, cseq)
 end
 
+#This gets called for input signals
+function add_sequence!{T, TS}(sig::ImagineSignal{T}, seqname::String, sequence::TS)
+    seqdict = sequence_lookup(sig)
+    @assert length(sequence) >= 1
+    if haskey(seqdict, seqname)
+        error("A sequence by this name exists.  If you want to replace the existing sequence, use the replace! function")
+    else
+        seqdict[seqname] = sequence
+    end
+end
+
 function add_sequence!{T<:RLEVector}(com::ImagineSignal{T}, seqname::String, sequence::T)
     seqdict = sequence_lookup(com)
     @assert full_length(sequence) >= 1
@@ -311,7 +325,7 @@ function add_sequence!{T<:RLEVector}(com::ImagineSignal{T}, seqname::String, seq
     end
 end
 
-function append!{T<:RLEVector}(com::ImagineSignal{T}, seqname::String)
+function append!(com::ImagineSignal{T}, seqname::String) where {T<:RLEVector}
     seqdict = sequence_lookup(com)
     if !haskey(seqdict, seqname)
         error("The requested sequence name was not found.  You most first add the sequence with add_sequence!(com, seqname, sequence), or instead you can add it and append it at the same time with append!(com, seqname, sequence)")
@@ -335,9 +349,23 @@ function append!{T<:RLEVector}(com::ImagineSignal{T}, seqname::String)
     return com
 end
 
+append!(com::ImagineSignal{T}, seqlist::V) where {T<:RLEVector, V<:AbstractVector{String}} = foreach(x->append!(com,x), seqlist)
+
+#this one gets called when appending to input signals
+function append!{T, TS}(com::ImagineSignal{T}, seqname::String, sequence::AbstractVector{TS})
+    warn("You are appending to an input signal.  This can be useful for testing, but it does not influence the operation of Imagine.")
+    @assert length(sequence) >= 1
+    rawseq = mapped2raw(sequence, mapper(com))[:]
+    add_sequence!(com, seqname, rawseq)
+    push!(sequences(com), rawseq)
+    push!(sequence_names(com), seqname)
+    push!(cumlength(com), length(com) + length(rawseq))
+    return com
+end
+
 function append!{T<:RLEVector, TS}(com::ImagineSignal{T}, seqname::String, sequence::AbstractVector{TS})
-        cseq = compress(sequence, mapper(com))
-        return append!(com, seqname, cseq)
+    cseq = compress(sequence, mapper(com))
+    return append!(com, seqname, cseq)
 end
 
 function append!{T<:RLEVector}(com::ImagineSignal{T}, seqname::String, sequence::T)
@@ -370,14 +398,18 @@ function pop!{T<:RLEVector}(com::ImagineSignal{T})
     return seq
 end
 
-function empty!{T<:RLEVector}(com::ImagineSignal{T}; clear_library = false)
-    empty!(com.cumlength)
-    empty!(com.sequence_names)
-    empty!(com.sequences)
+#for both output and input (recorded) signals
+function empty!(sig::ImagineSignal{T}; clear_library = false) where {T}
+    empty!(sig.cumlength)
+    empty!(sig.sequences)
     if clear_library
-        empty!(com.sequence_lookup)
+        lookup = sig.sequence_lookup
+        for k in sequence_names(sig)
+            delete!(lookup, k)
+        end
     end
-    return com
+    empty!(sig.sequence_names)
+    return sig
 end
 
 function replace!{T<:RLEVector, TS}(com::ImagineSignal{T}, seqname::String, sequence::AbstractVector{TS})

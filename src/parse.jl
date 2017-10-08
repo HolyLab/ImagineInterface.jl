@@ -160,7 +160,11 @@ function parse_di(di_name, chns, labels, rig, sample_rate::HasInverseTimeUnits; 
     #assign labels to di_sigs
     for i = 1:length(chns)
         sig = getdaqchan(di_sigs, chns[i])
-        rename!(sig, String(labels[i]))
+        if isfree(sig)
+            rename!(sig, String(labels[i]))
+        elseif String(labels[i]) != name(sig) && labels[i] != "unused"
+            warn("The name $(String(labels[i])) was provided for a di channel that cannot be renamed.  Defaulting to its allowed name")
+        end
         if labels[i] != "unused"
             push!(di_sigs_used, sig)
         end

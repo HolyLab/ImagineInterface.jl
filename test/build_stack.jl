@@ -1,4 +1,4 @@
-using ImagineInterface, Unitful
+using ImagineInterface, Unitful, IntervalSets
 using Base.Test
 
 ##################################BIDIRECTIONAL STACK########################################3
@@ -15,16 +15,18 @@ nsamps_stack = ceil(Int, stack_time*sample_rate)
 
 #offset by one sample going forward so that we don't use the end points of the triangle
 delay1samp = 1/sample_rate
+exp_dist = exp_time * abs(pmax - pmin) / stack_time
 
-exp_intervals_fwd = spaced_intervals(posfwd, z_spacing, exp_time, sample_rate; delay=delay1samp, z_pad = z_pad, alignment=:start, rig="ocpi-2")
-exp_intervals_back = spaced_intervals(posback, z_spacing, exp_time, sample_rate; delay=0.0*Unitful.s, z_pad = z_pad, alignment=:stop, rig="ocpi-2")
-
-las_intervals_fwd = map(x->ImagineInterface.scale(x, flash_frac), exp_intervals_fwd)
-#las_intervals_back = map(x->scale(x, flash_frac), exp_intervals_back)
+exp_intervals_fwd = spaced_intervals(posfwd, z_spacing, exp_time, sample_rate; delay=delay1samp, z_pad = max(z_pad, exp_dist), alignment=:start, rig="ocpi-2")
+exp_nsamps = width(exp_intervals_fwd[1]) + 1
+flash_nsamps = ImagineInterface.calc_num_samps(flash_frac * exp_time, sample_rate)
+offset_nsamps = exp_nsamps - flash_nsamps
+exp_intervals_back = map(x-> ClosedInterval(length(posfwd)-(maximum(x)+offset_nsamps-2), length(posfwd)-(maximum(x)-flash_nsamps-1)), exp_intervals_fwd)
+las_intervals_fwd = map(x-> ClosedInterval(maximum(x)-flash_nsamps+1, maximum(x)), exp_intervals_fwd)
+las_intervals_back = map(x-> ClosedInterval(maximum(x)-flash_nsamps+1, maximum(x)), exp_intervals_back)
 
 samps_las_fwd = gen_pulses(nsamps_stack, las_intervals_fwd)
-#samps_las_back = gen_pulses(nsamps_stack, las_intervals_back) #this can be off-by-one sample due to rounding in the scale function
-samps_las_back = reverse(circshift(samps_las_fwd,-1)) 
+samps_las_back = gen_pulses(nsamps_stack, las_intervals_back)
 samps_cam_fwd = gen_pulses(nsamps_stack, exp_intervals_fwd)
 samps_cam_back = gen_pulses(nsamps_stack, exp_intervals_back)
 
@@ -39,8 +41,6 @@ samps_cam_back = gen_pulses(nsamps_stack, exp_intervals_back)
 @test posback[1] == pmax
 @test posback[end] > pmin
 @test length(samps_cam_fwd) == nsamps_stack
-@test samps_cam_fwd == reverse(circshift(samps_cam_back,-1))
-@test samps_las_fwd == reverse(circshift(samps_las_back,-1)) 
 #count pulses
 nexp = length(exp_intervals_fwd)
 @test nexp == length(exp_intervals_back) == 61
@@ -54,7 +54,19 @@ d = gen_bidirectional_stack(pmin, pmax, z_spacing, stack_time, exp_time, sample_
 @test d["positioner"] == vcat(posfwd, posback)
 @test d["camera"] == vcat(samps_cam_fwd, samps_cam_back)
 @test d["laser"] == vcat(samps_las_fwd, samps_las_back)
+@test all(find_pulse_stops(d["camera"]) .== find_pulse_stops(d["laser"]))
 @test d["nframes"] == length(exp_intervals_fwd) * 2
+
+cam = d["camera"]
+las = d["laser"]
+cam1 = cam[1:div(length(cam),2)]
+cam2 = cam[div(length(cam),2)+1:end]
+las1 = las[1:div(length(las),2)]
+las2 = las[div(length(las),2)+1:end]
+lexp1 = cam1.&las1 #overlap of laser with exposure
+lexp2= reverse(cam2.&las2) #reversed to align with lexp1
+@test all(lexp1[2:end].==lexp2[1:end-1]) #exclude endpoints of the triangle
+
 
 #write it
 ocpi2 = rigtemplate("ocpi-2"; sample_rate = sample_rate)

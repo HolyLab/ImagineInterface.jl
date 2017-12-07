@@ -2,16 +2,12 @@ __precompile__()
 
 module ImagineInterface
 
-using JSON, Unitful
+using JSON, Unitful, UnitAliases
 using MappedArrays, AxisArrays, IntervalSets, DataStructures, ImagineFormat
 
 import Base: convert, show, length, size, isempty, ==, append!, pop!, empty! #, scale
 
 using Unitful: μm, s, V
-const HasVoltageUnits{T,U} = Quantity{T, typeof(0.0V).parameters[2], U}
-const HasTimeUnits{T,U} = Quantity{T, typeof(0.0s).parameters[2], U}
-const HasInverseTimeUnits{T,U} = Quantity{T, typeof(inv(0.0s)).parameters[2], U}
-const HasLengthUnits{T,U} = Quantity{T, typeof(0.0μm).parameters[2], U}
 
 include("metadata_constants.jl")
 #Load hardware parameters for all rigs

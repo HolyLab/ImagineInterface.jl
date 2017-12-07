@@ -97,6 +97,9 @@ CAM_CONTROL_CHANS[rig_key] = ocpi_lsk_cam_ctrl_chans
 CAM_MONITOR_CHANS[rig_key] = ocpi_lsk_cam_mon_chans
 LAS_CONTROL_CHANS[rig_key] = ocpi_lsk_laschans
 STIM_CHANS[rig_key] =OrderedSet(ocpi_lsk_stimchans)
+GALVO_CONTROL_CHANS[rig_key] = String[]
+GALVO_MONITOR_CHANS[rig_key] = String[]
+
 FIXED_NAMES[rig_key] = ocpi_lsk_fixed_names
 FIXED_DAQ_CHANS[rig_key] = ocpi_lsk_fixed_daqchans
 

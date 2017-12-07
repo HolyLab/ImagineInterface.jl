@@ -35,6 +35,11 @@ const CAM_MONITOR_CHANS= Dict()
 const LAS_CONTROL_CHANS= Dict()
 #Lists of (digital) stimulus daq channels
 const STIM_CHANS= Dict()
+#Lists of galvo control daq channels
+const GALVO_CONTROL_CHANS= Dict()
+#Lists of galvo monitor daq chans
+const GALVO_MONITOR_CHANS= Dict()
+
 #These names aren't allowed to be changed by users when writing command files
 const FIXED_NAMES = Dict()
 const FIXED_DAQ_CHANS = Dict()
@@ -67,6 +72,8 @@ iscam(daq_chan::String, rig::String) = in(daq_chan, CAM_CONTROL_CHANS[rig])
 iscammonitor(daq_chan::String, rig::String) = in(daq_chan, CAM_MONITOR_CHANS[rig])
 islas(daq_chan::String, rig::String) = in(daq_chan, LAS_CONTROL_CHANS[rig])
 isstim(daq_chan::String, rig::String) = in(daq_chan, STIM_CHANS[rig])
+isgalvo(daq_chan::String, rig::String) = in(daq_chan, GALVO_CONTROL_CHANS[rig])
+isgalvomonitor(daq_chan::String, rig::String) = in(daq_chan, GALVO_MONITOR_CHANS[rig])
 
 #For querying rig camera info
 function chip_size(rig::String)

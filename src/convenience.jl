@@ -58,13 +58,20 @@ isstim{T<:ImagineSignal}(com::T)  = isstim(daq_channel(com), rig_name(com))
 findstimuli{T<:ImagineSignal}(coms::AbstractVector{T}) = find(x->isstim(x), coms)
 getstimuli{T<:ImagineSignal}(coms::AbstractVector{T}) = view(coms, findstimuli(coms))
 
+isgalvo{T<:ImagineSignal}(com::T)  = iscam(daq_channel(com), rig_name(com))
+findgalvos{T<:ImagineSignal}(coms::AbstractVector{T}) = find(x->iscam(x), coms)
+getgalvos{T<:ImagineSignal}(coms::AbstractVector{T}) = view(coms, findcameras(coms))
 
-hasmonitor{T<:ImagineSignal}(com::T) = iscam(com) || ispos(com)
-hasactuator{T<:ImagineSignal}(com::T) = iscammonitor(com) || isposmonitor(com)
+isgalvomonitor{T<:ImagineSignal}(com::T)  = isgalvomonitor(daq_channel(com), rig_name(com))
+findgalvomonitors{T<:ImagineSignal}(coms::AbstractVector{T}) = find(x->isgalvomonitor(x), coms)
+getgalvomonitors{T<:ImagineSignal}(coms::AbstractVector{T}) = view(coms, findgalvomonitors(coms))
+
+hasmonitor{T<:ImagineSignal}(com::T) = iscam(com) || ispos(com) || isgalvo(com)
+hasactuator{T<:ImagineSignal}(com::T) = iscammonitor(com) || isposmonitor(com) || isgalvomonitor(com)
 
 function monitor_name{T<:ImagineSignal}(com::T)
     if !hasmonitor(com)
-        error("There is not monitor (input) corresponding to this channel")
+        error("There is no monitor (input) corresponding to this channel")
     end
     if iscam(com)
         return name(com) * " frame monitor"
@@ -80,7 +87,7 @@ end
 
 function actuator_name{T<:ImagineSignal}(com::T)
     if !hasactuator(com)
-        error("There is not actuator (output) corresponding to this channel")
+        error("There is no actuator (output) corresponding to this channel")
     end
     if iscammonitor(com)
         return String(split(name(com), " frame monitor")[1])

@@ -3,12 +3,12 @@ push!(RIGS, rig_key)
 
 const ocpi2_mappings = Dict("AO0"=>"axial piezo",
                       "AO1"=>"horizontal piezo",
-                      "AO2"=>"analogout3",
-                      "AO3"=>"analogout4",
+                      "AO2"=>"galvo1",
+                      "AO3"=>"galvo2",
                       "AI0"=>"axial piezo monitor",
                       "AI1"=>"horizontal piezo monitor",
-                      "AI2"=>"analogin1",
-                      "AI3"=>"analogin2",
+                      "AI2"=>"galvo1 monitor",
+                      "AI3"=>"galvo2 monitor",
                       "AI4"=>"analogin3",
                       "AI5"=>"analogin4",
                       "AI6"=>"analogin5",
@@ -83,7 +83,9 @@ const ocpi2_cam_ctrl_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["cam
 const ocpi2_cam_mon_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["camera1 frame monitor"; "camera2 frame monitor"])
 const ocpi2_laschans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["405nm laser"; "445nm laser"; "488nm laser"; "514nm laser"; "561nm laser"; "all lasers"])
 const ocpi2_stimchans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["stimulus$x" for x = 1:15])
-const ocpi2_fixed_names = ["axial piezo", "axial piezo monitor", "horizontal piezo", "horizontal piezo monitor", "camera1", "camera1 frame monitor", "camera2", "camera2 frame monitor", "405nm laser", "445nm laser", "488nm laser", "514nm laser", "561nm laser"]
+const ocpi2_galvo_ctrl_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["galvo1"; "galvo2"])
+const ocpi2_galvo_mon_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["galvo1 monitor"; "galvo2 monitor"])
+const ocpi2_fixed_names = ["axial piezo", "axial piezo monitor", "horizontal piezo", "horizontal piezo monitor", "camera1", "camera1 frame monitor", "camera2", "camera2 frame monitor", "405nm laser", "445nm laser", "488nm laser", "514nm laser", "561nm laser", "galvo1", "galvo2", "galvo1 monitor", "galvo2 monitor"]
 const ocpi2_fixed_daqchans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ocpi2_fixed_names)
 
 AO_CHANS[rig_key] = OrderedSet(ocpi2_aochans)
@@ -96,6 +98,8 @@ CAM_CONTROL_CHANS[rig_key] = ocpi2_cam_ctrl_chans
 CAM_MONITOR_CHANS[rig_key] = ocpi2_cam_mon_chans
 LAS_CONTROL_CHANS[rig_key] = ocpi2_laschans
 STIM_CHANS[rig_key] =OrderedSet(ocpi2_stimchans)
+GALVO_CONTROL_CHANS[rig_key] = ocpi2_galvo_ctrl_chans
+GALVO_MONITOR_CHANS[rig_key] = ocpi2_galvo_mon_chans
 FIXED_NAMES[rig_key] = ocpi2_fixed_names
 FIXED_DAQ_CHANS[rig_key] = ocpi2_fixed_daqchans
 

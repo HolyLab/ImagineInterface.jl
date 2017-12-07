@@ -71,8 +71,8 @@ npulse_laser = count_pulses(getname(do_coms, "488nm laser shutter"))
 @test nexp_di == nexp_do == hdr["number of frames requested"]
 @test npulse_laser == hdr["nStacks"]
 
-pos_ao = ustrip(get_samples(getname(ao_coms, "axial piezo")))
-pos_ai = ustrip(get_samples(getname(ai_recs, "axial piezo monitor")))
+pos_ao = ustrip.(get_samples(getname(ao_coms, "axial piezo")))
+pos_ai = ustrip.(get_samples(getname(ai_recs, "axial piezo monitor")))
 @test cor(pos_ao, pos_ai) >= 0.97
 
 #Automatic .json, .ai, .di, and .imagine loading

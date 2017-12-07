@@ -128,12 +128,17 @@ append!(stim_com, "on_off", stim_vec)
 @test ImagineInterface.get_samples_raw(stim_com, 1, length(stim_com)) == convert(Vector{UInt8}, stim_vec)
 
 #this caught an off-by-one error
-_cam = getcameras(rigtemplate("ocpi-2"; sample_rate = 1000 * inv(Unitful.s)))[1]
+oc2 = rigtemplate("ocpi-2"; sample_rate = 1000 * inv(Unitful.s))
+_cam = getcameras(oc2)[1]
 c = fill(UInt8(1), 10)
 c[1] = 0
 c[end] = 0
 append!(_cam, "c", c)
 @test ImagineInterface.get_samples_raw(_cam, 10, 10)[1] == false
+galvos = getgalvos(oc2)
+@test hasmonitor(galvos[1]) && hasmonitor(galvos[2])
+galvo_mons = getgalvomonitors(oc2)
+@test hasactuator(galvo_mons[1]) && hasactuator(galvo_mons[2])
 
 #convenience
 digs = getdigital(allcoms)

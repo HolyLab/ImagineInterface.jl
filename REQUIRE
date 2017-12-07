@@ -2,7 +2,6 @@ JSON
 AxisArrays
 IntervalSets
 Unitful
-UnitAliases
 Ranges
 MappedArrays
 ImagineFormat

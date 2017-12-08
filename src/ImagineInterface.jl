@@ -3,8 +3,8 @@ __precompile__()
 module ImagineInterface
 
 using JSON, Unitful, UnitAliases
-using MappedArrays, AxisArrays, IntervalSets, DataStructures, ImagineFormat
-
+using MappedArrays, AxisArrays, IntervalSets, DataStructures, ImagineFormat, ImagineHardware
+import ImagineHardware:samprate
 import Base: convert, show, length, size, isempty, ==, append!, pop!, empty! #, scale
 
 using Unitful: μm, s, V

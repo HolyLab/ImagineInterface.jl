@@ -1,4 +1,4 @@
-pkgs = ["UnitAliases"]
+pkgs = ["UnitAliases", "ImagineHardware"]
 
 for p in pkgs
     try

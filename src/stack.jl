@@ -11,6 +11,28 @@ function calc_num_samps(duration::HasTimeUnits, sample_rate::HasInverseTimeUnits
     return rounded
 end
 
+#Returns a set of positions _centered_ within the span of pman and pmax and spaced by slice_spacing
+#TODO: use this wherever such calculations are done
+function slice_positions(pstart::HasLengthUnits, pstop::HasLengthUnits, slice_spacing::HasLengthUnits)
+    pstart = uconvert(Unitful.μm, pstart)
+    pstop = uconvert(Unitful.μm, pstop)
+    slice_spacing = uconvert(Unitful.μm, slice_spacing)
+    prng = abs(pstop - pstart)
+    nslices = floor(Int, ustrip(prng/slice_spacing)) + 1
+    leftover = prng - ((nslices-1) * slice_spacing)
+    if pstart > pstop
+        leftover = -leftover
+    end
+    return [linspace(pstart + leftover, pstop - leftover, nslices)...]
+end
+
+#This version first adjusts pmin and pmax to respect padding
+function slice_positions(pmin::HasLengthUnits, pmax::HasLengthUnits, slice_spacing::HasLengthUnits, slice_pad::HasLengthUnits)
+    @assert pmin <= pmax
+    pstart = uconvert(Unitful.μm, pmin+slice_pad)
+    pstop = uconvert(Unitful.μm, pmax-slice_pad)
+    return slice_positions(pstart, pstop, slice_spacing)
+end
 
 #The sweep covers an interval that is closed on the left and open on the right.
 #i.e. a sweep from 0 to 10 will include a sample at 0 but not at 10

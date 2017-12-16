@@ -19,7 +19,7 @@ function slice_positions(pstart::HasLengthUnits, pstop::HasLengthUnits, slice_sp
     slice_spacing = uconvert(Unitful.μm, slice_spacing)
     prng = abs(pstop - pstart)
     nslices = floor(Int, ustrip(prng/slice_spacing)) + 1
-    leftover = prng - ((nslices-1) * slice_spacing)
+    leftover = (prng - ((nslices-1) * slice_spacing))/2
     if pstart > pstop
         leftover = -leftover
     end

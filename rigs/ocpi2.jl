@@ -107,8 +107,8 @@ RIG_CHIP_SIZES[rig_key] = PCO_EDGE_4_2_CHIP_SIZE
 RIG_FRAMERATE_FUNCS[rig_key] = PCO_EDGE_4_2_FRAMERATE_FUNC
 
 #TODO: measure these
-LASER_ON_TIME[rig_key] = 100 * Unitful.μs
-LASER_OFF_TIME[rig_key] = 50 * Unitful.μs
+LASER_ON_TIME[rig_key] = 9 * Unitful.μs
+LASER_OFF_TIME[rig_key] = 9 * Unitful.μs
 
 CAMERA_ON_TIME[rig_key] = 19526.0 * Unitful.ns #This is the worst jitter measured with Edge 5.5 and 4.2 cameras, see ImagineInterface issue #18
 CAMERA_OFF_TIME[rig_key] = 19526.0 * Unitful.ns #This is the worst jitter measured with Edge 5.5 and 4.2 cameras, see ImagineInterface issue #18

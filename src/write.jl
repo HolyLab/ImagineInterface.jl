@@ -59,7 +59,7 @@ function initialize_outdict{TTI<:HasInverseTimeUnits}(rig::String, seq_lookup::D
     out_dict[ANALOG_KEY] = ana_dict
     out_dict[DIGITAL_KEY] = dig_dict
     out_dict[COMPONENT_KEY] = seq_lookup
-    sampr = ustrip(uconvert(Unitful.s^-1, samp_rate))
+    sampr = convert(Int, ustrip(upreferred(samp_rate)))
     @assert isa(sampr, Integer) #TODO: Check for samprate beyond DAQ's capability
     out_dict[METADATA_KEY] = Dict("samples per second" => sampr,
                                             "sample num" => nsamps,

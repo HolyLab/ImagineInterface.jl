@@ -82,7 +82,7 @@ function show(io::IO, com::ImagineSignal)
 end
 
 Base.length(com::ImagineSignal) = isempty(com) ? 0 : com.cumlength[end]
-duration(com::ImagineSignal) = length(com)/samprate(com)
+duration(com::ImagineSignal) = upreferred(length(com)/samprate(com))
 Base.size(C::ImagineSignal)    = length(C)
 Base.isempty(com::ImagineSignal) = isempty(cumlength(com))
 

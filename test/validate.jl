@@ -60,7 +60,7 @@ replace!(pos, "b", b)
 @test isa(check_piezos(getpositioners(ocpi2); window_sz = win_sz), ValidationState)
 
 #test pulse validation code camera
-srate = 100000*inv(Unitful.s)
+srate = 1000000*inv(Unitful.s)
 rig = "ocpi-2"
 ocpirig = rigtemplate(rig; sample_rate = srate)
 function test_seq1(first_i, samps_on, start2start)

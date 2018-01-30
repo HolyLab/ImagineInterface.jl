@@ -3,11 +3,11 @@ __precompile__()
 module ImagineInterface
 
 using JSON, Unitful, UnitAliases
-using MappedArrays, AxisArrays, IntervalSets, DataStructures, ImagineFormat, ImagineHardware
+using MappedArrays, AxisArrays, IntervalSets, DataStructures, ImagineFormat, ImagineHardware, DSP
 import ImagineHardware:samprate
 import Base: convert, show, length, size, isempty, ==, append!, pop!, empty! #, scale
 
-using Unitful: μm, s, V
+using Unitful: μm, s, Hz, V
 
 include("metadata_constants.jl")
 #Load hardware parameters for all rigs
@@ -121,7 +121,8 @@ export validate_all
 export write_commands
 
 #stack.jl
-export gen_sweep,
+export  apply_lp,
+        gen_sweep,
         gen_sawtooth,
         gen_bidi_pos,
         spaced_intervals,

@@ -5,13 +5,13 @@ function apply_lp(mod_samps::AbstractVector, sampr::HasInverseTimeUnits, cutoff:
     if isinf(cutoff)
         return mod_samps
     end
-    mod_samps3 = repmat(mod_samps, 3)
+    mod_samps3 = repmat(mod_samps, 11)
     fs = ustrip(uconvert(Unitful.Hz, sampr))
     cutoff = ustrip(uconvert(Unitful.Hz, cutoff))
     responsetype = Lowpass(cutoff; fs=fs)
     designmethod = Butterworth(4)
     filtd = filtfilt(digitalfilter(responsetype, designmethod), ustrip.(mod_samps3)).*unit(mod_samps[1])
-    return filtd[length(mod_samps)+1:(2*length(mod_samps))]
+    return filtd[5*length(mod_samps)+1:(6*length(mod_samps))]
 end
 
 #Use this whenever we need to calculate sample counts so that we are consistent with rounding

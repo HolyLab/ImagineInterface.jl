@@ -29,7 +29,8 @@ include("stack.jl")
 
 #metadata_constants.jl
 export chip_size,
-        max_framerate
+        max_framerate,
+        max_roi
 
 #imaginecommand.jl
 export RepeatedValue,

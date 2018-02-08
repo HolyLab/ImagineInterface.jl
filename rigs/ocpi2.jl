@@ -105,6 +105,7 @@ FIXED_DAQ_CHANS[rig_key] = ocpi2_fixed_daqchans
 
 RIG_CHIP_SIZES[rig_key] = PCO_EDGE_4_2_CHIP_SIZE
 RIG_FRAMERATE_FUNCS[rig_key] = PCO_EDGE_4_2_FRAMERATE_FUNC
+RIG_ROI_FUNCS[rig_key] = PCO_EDGE_4_2_ROI_FUNC
 
 #TODO: measure these
 LASER_ON_TIME[rig_key] = 9 * Unitful.μs

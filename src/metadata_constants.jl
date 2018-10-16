@@ -46,7 +46,8 @@ const FIXED_DAQ_CHANS = Dict()
 #camera chip sizes
 const RIG_CHIP_SIZES = Dict()
 #functions for calculating frame rate given two arguments: horizontal ROI size and vertical ROI size (in pixels)
-const RIG_FRAMERATE_FUNCS = Dict()
+const RIG_FRAMERATE_FUNCS = Dict() #calculate max framerate given ROI
+const RIG_ROI_FUNCS = Dict() #the inverse of the framerate function
 #voltage ranges of analog channels
 const AO_RANGE = Dict()
 const AI_RANGE = Dict()
@@ -90,10 +91,20 @@ function max_framerate(rig::String, hsize::Int, vsize::Int)
     return RIG_FRAMERATE_FUNCS[rig]((hsize,vsize)) * Unitful.s^-1
 end
 
+#returns the size of the largest ROI that can be captured at a desired framerate
+function max_roi(rig::String, framerate::HasInverseTimeUnits)
+    if !in(rig, RIGS)
+        error("Unrecognized rig")
+    end
+    return RIG_ROI_FUNCS[rig](framerate)
+end
+
 #TODO: abstract camera, move the below stuff to separate files.
 const PCO_EDGE_5_5_CHIP_SIZE = (2560, 2160)
 const PCO_EDGE_4_2_CHIP_SIZE = (2060, 2048) #We use the (older) CameraLink version (without the new sensor)
-const PCO_EDGE_5_5_FRAMERATE_FUNC = x::Tuple{Int,Int} -> max(100 * 2^(log(2, 2048/x[2])), 100.0)
-const PCO_EDGE_4_2_FRAMERATE_FUNC = x::Tuple{Int,Int} -> max(100 * 2^(log(2, 2048/x[2])), 100.0)
+const PCO_EDGE_5_5_FRAMERATE_FUNC = x::Tuple{Int,Int} -> max(100 * 2^(log(2, PCO_EDGE_5_5_CHIP_SIZE[2]/x[2])), 100.0)
+const PCO_EDGE_4_2_FRAMERATE_FUNC = x::Tuple{Int,Int} -> max(100 * 2^(log(2, PCO_EDGE_4_2_CHIP_SIZE[2]/x[2])), 100.0)
+const PCO_EDGE_5_5_ROI_FUNC = x::HasInverseTimeUnits -> (PCO_EDGE_5_5_CHIP_SIZE[1], min(PCO_EDGE_5_5_CHIP_SIZE[2], floor(Int, PCO_EDGE_5_5_CHIP_SIZE[2]/upreferred(x/100s^-1))))
+const PCO_EDGE_4_2_ROI_FUNC = x::HasInverseTimeUnits -> (PCO_EDGE_4_2_CHIP_SIZE[1], min(PCO_EDGE_4_2_CHIP_SIZE[2], floor(Int, PCO_EDGE_4_2_CHIP_SIZE[2]/upreferred(x/100s^-1))))
 #const EXPOSURE_TRIGGER_DELAY = 0.0 * Unitful.ns #This is trivially short.  See measurements posted in ImagineInterface issue #18 
 

@@ -61,6 +61,7 @@ FIXED_DAQ_CHANS[rig_key] = ocpi1_fixed_daqchans
 
 RIG_CHIP_SIZES[rig_key] = PCO_EDGE_5_5_CHIP_SIZE
 RIG_FRAMERATE_FUNCS[rig_key] = PCO_EDGE_5_5_FRAMERATE_FUNC
+RIG_ROI_FUNCS[rig_key] = PCO_EDGE_5_5_ROI_FUNC
 
 LASER_ON_TIME[rig_key] = 100 * Unitful.ms
 LASER_OFF_TIME[rig_key] = 100 * Unitful.ms

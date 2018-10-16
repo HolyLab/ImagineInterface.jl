@@ -1,8 +1,10 @@
-JSON
-AxisArrays
-IntervalSets
-Unitful
-Ranges
-MappedArrays
+julia 0.6
+JSON 0.17.2 0.17.2+
+AxisArrays 0.2.1 0.2.1+
+IntervalSets 0.2.0 0.2.0+
+Unitful 0.8.0 0.8.0+
+MappedArrays 0.0.7 0.0.7+
+Ranges 0.0.1 0.0.1+
+DataStructures 0.8.4 0.8.4+
+DSP 0.5.1 0.5.1+
 ImagineFormat
-DataStructures

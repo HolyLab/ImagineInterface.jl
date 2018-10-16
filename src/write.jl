@@ -59,7 +59,7 @@ function initialize_outdict{TTI<:HasInverseTimeUnits}(rig::String, seq_lookup::D
     out_dict[ANALOG_KEY] = ana_dict
     out_dict[DIGITAL_KEY] = dig_dict
     out_dict[COMPONENT_KEY] = seq_lookup
-    sampr = ustrip(uconvert(Unitful.s^-1, samp_rate))
+    sampr = convert(Int, ustrip(upreferred(samp_rate)))
     @assert isa(sampr, Integer) #TODO: Check for samprate beyond DAQ's capability
     out_dict[METADATA_KEY] = Dict("samples per second" => sampr,
                                             "sample num" => nsamps,
@@ -144,21 +144,22 @@ function check_cam_meta(coms::Vector{ImagineSignal}, nstacks, nframes_per_stack,
             error("Expected $expected_count frames but only counted $(frame_counts[i]) exposure trigger pulses for $(name(cams[i]))")
         end
     end
-    which_cams = map(name, cams)
-    return which_cams
 end
 
-function write_commands(fname::String, coms::Vector{ImagineSignal}, nstacks::NS, nframes_per_stack::NF, exp_time::EXP; exp_trig_mode = ["External Start";], isbidi=false) where {NS <: Union{Int, Vector{Int}}, NF <: Union{Int, Vector{Int}}, EXP <: Union{HasTimeUnits, Vector{HasTimeUnits}}}
+function write_commands(fname::String, coms::Vector{ImagineSignal}, nstacks::NS, nframes_per_stack::NF, exp_time::EXP; exp_trig_mode = ["External Start";], isbidi=false, skip_validation=false) where {NS <: Union{Int, Vector{Int}}, NF <: Union{Int, Vector{Int}}, EXP <: Union{HasTimeUnits, Vector{HasTimeUnits}}}
     @assert splitext(fname)[2] == ".json"
     if isa(exp_trig_mode, AbstractString)
         exp_trig_mode = [exp_trig_mode;]
     end
     isused = map(x-> !isoutput(x) || !isempty(x), coms)
     coms_used = coms[isused]
-    print("Validating signals before writing...\n")
-    which_cams = check_cam_meta(coms_used, nstacks, nframes_per_stack, exp_time, exp_trig_mode)
-    validate_all(coms_used; check_is_sufficient = true)
-    print("...finished validating signals\n")
+    if !skip_validation
+        print("Validating signals before writing...\n")
+        check_cam_meta(coms_used, nstacks, nframes_per_stack, exp_time, exp_trig_mode)
+        validate_all(coms_used; check_is_sufficient = true)
+        print("...finished validating signals\n")
+    end
+    which_cams = map(name, getcameras(coms))
     rig = rig_name(first(coms_used))
     seq_lookup = combine_lookups(coms_used)
     if rig == "ocpi-2" && findname(coms_used, "all lasers")==0

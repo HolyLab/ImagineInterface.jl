@@ -94,6 +94,24 @@ lasers = getlasers(_ocpi2)
 las_all = getname(lasers, "all lasers") #should have been added automatically
 @test all(get_samples(las_all) .= true)
 
+#smoothed bidi
+smfwd, smbck = ImagineInterface.fit_smoothed_bidi(pmin, pmax, inv(2*stack_time), sample_rate; cutoff = 15.0*Unitful.Hz)
+@test abs((maximum(smfwd) - pmax)) <= 0.01*Unitful.μm
+@test abs((maximum(smbck) - pmax)) <= 0.01*Unitful.μm
+@test abs((minimum(smfwd) - pmin)) <= 0.01*Unitful.μm
+@test abs((minimum(smbck) - pmin)) <= 0.01*Unitful.μm
+@test std(ustrip.(posfwd.-smfwd)) > 0.5 #make sure it's not just a triangle wave
+@test std(ustrip.(posback.-smbck)) > 0.5
+
+#slice_positions
+ps = ImagineInterface.slice_positions(pmin, pmax, 5.0*Unitful.μm, 1.0*Unitful.μm)
+#with 1um padding we have 198um total to place the slices, can fit 40 slices in a span of 395um
+@test length(ps) == 40
+#after centering expect an extra 3/2 = 1.5um padding
+@test isapprox(first(ps), 2.5*Unitful.μm)
+@test isapprox(last(ps), 197.5*Unitful.μm)
+@test all(isapprox.(diff(ps), 5.0*Unitful.μm))
+
 ##################################UNIDIRECTIONAL STACK########################################
 #set reset time equal to stack time, so the piezo waveform should be the same as in the bidi test, with half of the frames
 posuni, posreset = gen_sawtooth(pmin, pmax, stack_time, stack_time, sample_rate)

@@ -285,3 +285,16 @@ append!(pos, "ramp_up2", newdat[1:5])
 append!(pos, "ramp_up2") #append existing, not the first sequence
 @test length(pos) == lpos + 10
 @test all(get_samples(pos, "ramp_up2") .== get_samples(pos)[lpos+6:end])
+
+#Test metadata retrieval functions
+cs2 = chip_size("ocpi-2")
+cs1 = chip_size("ocpi-1")
+@test max_framerate("ocpi-2", cs2...) == 100.0*Unitful.s^-1
+@test max_framerate("ocpi-2", cs2[1], div(cs2[2],2)) == 200.0*Unitful.s^-1
+@test max_framerate("ocpi-1", cs1...) == 100.0*Unitful.s^-1
+@test max_framerate("ocpi-1", cs1[1], div(cs1[2],2)) == 200.0*Unitful.s^-1
+
+@test max_roi("ocpi-2", 100*Unitful.s^-1) == cs2
+@test max_roi("ocpi-2", 200*Unitful.s^-1) == (cs2[1], floor(Int, cs2[2]/2))
+@test max_roi("ocpi-1", 100*Unitful.s^-1) == cs1
+@test max_roi("ocpi-1", 200*Unitful.s^-1) == (cs1[1], floor(Int, cs1[2]/2))

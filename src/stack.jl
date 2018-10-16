@@ -1,5 +1,19 @@
 using Ranges #delete this when we drop 0.5 support
 
+#lowpass filter a command vector
+function apply_lp(mod_samps::AbstractVector, sampr::HasInverseTimeUnits, cutoff::HasInverseTimeUnits)
+    if isinf(cutoff)
+        return mod_samps
+    end
+    mod_samps3 = repmat(mod_samps, 11)
+    fs = ustrip(uconvert(Unitful.Hz, sampr))
+    cutoff = ustrip(uconvert(Unitful.Hz, cutoff))
+    responsetype = Lowpass(cutoff; fs=fs)
+    designmethod = Butterworth(4)
+    filtd = filtfilt(digitalfilter(responsetype, designmethod), ustrip.(mod_samps3)).*unit(mod_samps[1])
+    return filtd[5*length(mod_samps)+1:(6*length(mod_samps))]
+end
+
 #Use this whenever we need to calculate sample counts so that we are consistent with rounding
 function calc_num_samps(duration::HasTimeUnits, sample_rate::HasInverseTimeUnits; should_warn = true)
     unrounded = duration * sample_rate
@@ -11,6 +25,28 @@ function calc_num_samps(duration::HasTimeUnits, sample_rate::HasInverseTimeUnits
     return rounded
 end
 
+#Returns a set of positions _centered_ within the span of pman and pmax and spaced by slice_spacing
+#TODO: use this wherever such calculations are done
+function slice_positions(pstart::HasLengthUnits, pstop::HasLengthUnits, slice_spacing::HasLengthUnits)
+    pstart = uconvert(Unitful.μm, pstart)
+    pstop = uconvert(Unitful.μm, pstop)
+    slice_spacing = uconvert(Unitful.μm, slice_spacing)
+    prng = abs(pstop - pstart)
+    nslices = floor(Int, ustrip(prng/slice_spacing)) + 1
+    leftover = (prng - ((nslices-1) * slice_spacing))/2
+    if pstart > pstop
+        leftover = -leftover
+    end
+    return [linspace(pstart + leftover, pstop - leftover, nslices)...]
+end
+
+#This version first adjusts pmin and pmax to respect padding
+function slice_positions(pmin::HasLengthUnits, pmax::HasLengthUnits, slice_spacing::HasLengthUnits, slice_pad::HasLengthUnits)
+    @assert pmin <= pmax
+    pstart = uconvert(Unitful.μm, pmin+slice_pad)
+    pstop = uconvert(Unitful.μm, pmax-slice_pad)
+    return slice_positions(pstart, pstop, slice_spacing)
+end
 
 #The sweep covers an interval that is closed on the left and open on the right.
 #i.e. a sweep from 0 to 10 will include a sample at 0 but not at 10
@@ -35,7 +71,33 @@ function gen_sawtooth(pmin::HasLengthUnits, pmax::HasLengthUnits, tfwd::HasTimeU
     reset_linspace = gen_sweep(pmax, pmin, treset, sample_rate)
     return fwd_linspace, reset_linspace
 end
-gen_bidi_pos(pmin::HasLengthUnits, pmax::HasLengthUnits, tsweep::HasTimeUnits, sample_rate::HasInverseTimeUnits) = gen_sawtooth(pmin, pmax, tsweep, tsweep, sample_rate)
+
+gen_bidi_pos(pmin::HasLengthUnits, pmax::HasLengthUnits, tsweep::HasTimeUnits, sample_rate::HasInverseTimeUnits; lp_cutoff = Inf*Hz) = fit_smoothed_bidi(pmin, pmax, upreferred(1/(2*tsweep)), sample_rate; cutoff=lp_cutoff)
+
+#start with triangle and smooth it:
+#iteratively adjust limits of a waveform until the filtered version matches the desired pmin and pmax
+function fit_smoothed_bidi(pmin, pmax, f, sr; cutoff = 150.0Hz)
+	if cutoff == Inf*Hz
+		fwd, bck =  ImagineInterface.gen_sawtooth(pmin, pmax, upreferred(1/(2*f)), upreferred(1/(2*f)), sr)
+		return fwd,bck
+	end
+	thresh = 0.001μm
+	v = 100.0μm
+	wvform = fwd = bck = -1
+	dxtra = 0.0μm
+	while v > thresh
+		fwd, bck =  ImagineInterface.gen_sawtooth(pmin-dxtra, pmax+dxtra, upreferred(1/(2*f)), upreferred(1/(2*f)), sr)
+		wvform = apply_lp(vcat(fwd,bck), sr, cutoff)
+		mx = maximum(wvform)
+		mn = minimum(wvform)
+		v = max(abs(pmin - mn), abs(pmax - mx))
+		dxtra += v/2
+	end
+	if isnan(dxtra)
+		error("Smoothing seems to have failed")
+	end
+    return wvform[1:div(length(wvform),2)], wvform[div(length(wvform),2)+1:end]
+end
 
 #returns a vector of sample-index intervals with starts separated by `interval_spacing`.
 #The first interval is offset from the first sample of the sampled region by the `offset` keyword arg

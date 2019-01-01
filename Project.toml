@@ -1,0 +1,15 @@
+name = "ImagineInterface"
+uuid = "99e0f2f8-0dfb-11e9-36d7-39544d1dd687"
+version = "0.1.0"
+
+[deps]
+AxisArrays = "39de3d68-74b9-583c-8d2d-e117c070f3a9"
+DSP = "717857b8-e6f2-59f4-9121-6e50c889abd2"
+DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
+ImagineFormat = "4bab44a2-5ff2-5a6b-8e10-825fb9ac126a"
+IntervalSets = "8197267c-284f-5f27-9208-e0e47529a953"
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+MappedArrays = "dbb5928d-eab1-5f90-85c2-b9b0edb7c900"
+Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
+Ranges = "f25983ca-f764-5a23-878c-030f91a0c122"
+Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"

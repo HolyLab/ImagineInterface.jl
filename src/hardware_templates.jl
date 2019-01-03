@@ -1,4 +1,4 @@
-function default_samplemapper(rig_name::String, daq_chan_name::String; sample_rate = 10000s^-1)
+function default_samplemapper(rig_name::AbstractString, daq_chan_name::String; sample_rate = 10000s^-1)
     #is_digi_funcs = [iscam, islas, isstim, iscammonitor]
     #any(map(f->f(daq_chan_name, rig_name)), is_digi_funcs)
     if isdigital(daq_chan_name, rig_name)
@@ -16,23 +16,25 @@ function default_samplemapper(rig_name::String, daq_chan_name::String; sample_ra
     end
 end
 
-function generic_ao_samplemapper{TV<:HasVoltageUnits, TU}(v::AbstractInterval{TV}; rawtype=Int16, sample_rate::HasInverseTimeUnits{Int, TU}=10000s^-1)
+function generic_ao_samplemapper(v::AbstractInterval{TV};
+                                 rawtype=Int16, sample_rate::HasInverseTimeUnits{Int, TU}=10000s^-1) where{TV<:HasVoltageUnits, TU}
     return SampleMapper(typemin(rawtype), typemax(rawtype), minimum(v), maximum(v), minimum(v), maximum(v), sample_rate)
 end
 
 generic_ai_samplemapper = generic_ao_samplemapper
 
-function piezo_samplemapper{TL<:HasLengthUnits,TV<:HasVoltageUnits, TU}(p::AbstractInterval{TL}, v::AbstractInterval{TV}; rawtype=Int16, sample_rate::HasInverseTimeUnits{Int, TU}=10000s^-1)
+function piezo_samplemapper(p::AbstractInterval{TL}, v::AbstractInterval{TV};
+                            rawtype=Int16, sample_rate::HasInverseTimeUnits{Int, TU}=10000s^-1) where{TL<:HasLengthUnits,TV<:HasVoltageUnits, TU}
     return SampleMapper(zero(rawtype), typemax(rawtype), minimum(v), maximum(v), minimum(p), maximum(p), sample_rate)
 end
 
-function galvo_ctrl_samplemapper{TU}(rawtype=Int16, sample_rate::HasInverseTimeUnits{Int, TU}=10000s^-1)
+function galvo_ctrl_samplemapper(rawtype=Int16, sample_rate::HasInverseTimeUnits{Int, TU}=10000s^-1) where TU
     rad_min = -10.0*deg2rad(1.0)*Unitful.rad #1.0 degrees per volt
     rad_max = 10.0*deg2rad(1.0)*Unitful.rad
     return SampleMapper(zero(rawtype), typemax(rawtype), -10.0*Unitful.V, 10.0*Unitful.V, rad_min, rad_max, sample_rate)
 end
 
-function galvo_mon_samplemapper{TU}(rawtype=Int16, sample_rate::HasInverseTimeUnits{Int, TU}=10000s^-1)
+function galvo_mon_samplemapper(rawtype=Int16, sample_rate::HasInverseTimeUnits{Int, TU}=10000s^-1) where TU
     rad_min = -5.0*deg2rad(2.0)*Unitful.rad #2.0 degrees per volt
     rad_max = 5.0*deg2rad(2.0)*Unitful.rad
     return SampleMapper(zero(rawtype), typemax(rawtype), -5.0*Unitful.V, 5.0*Unitful.V, rad_min, rad_max, sample_rate)
@@ -41,12 +43,12 @@ end
 
 #Shortcut for creating a generic TTL SampleMapper, assumes TTL level of 3.3V (though this doesn't matter to Imagine, only for visualizing in Julia)
 #By default the raw samples are true/false values encoded as UInt8.  If using an analog channel for TTL signals these default limits should be changed
-function ttl_samplemapper{U}(rawmin=UInt8(false), rawmax=(UInt8(true)); sample_rate::HasInverseTimeUnits{Int, U}=10000s^-1)
+function ttl_samplemapper(rawmin=UInt8(false), rawmax=(UInt8(true)); sample_rate::HasInverseTimeUnits{Int, U}=10000s^-1) where U
     return SampleMapper(rawmin, rawmax, 0.0*Unitful.V, 3.3*Unitful.V, false, true, sample_rate)
 end
 
 #returns an array of empty ImagineSignals, one for each channel accessible to OCPI2 users
-function rigtemplate{U}(rig::String; sample_rate::HasInverseTimeUnits{Int,U} = 10000s^-1)
+function rigtemplate(rig::AbstractString; sample_rate::HasInverseTimeUnits{Int,U} = 10000s^-1) where U
     if !in(rig, RIGS)
         error("Unsupported rig")
     end

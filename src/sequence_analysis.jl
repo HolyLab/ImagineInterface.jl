@@ -45,12 +45,12 @@ find_pulse_stops(pulses::AbstractVector{Bool}, thresh) = find_pulse_stops(pulses
 find_pulse_starts(pulses::AbstractVector{Bool}, thresh::Bool) = find_pulse_starts(pulses)
 find_pulse_stops(pulses::AbstractVector{Bool}, thresh::Bool) = find_pulse_stops(pulses)
 
-find_pulse_starts{T}(pulses::AbstractVector{T}, thresh::T) = find_pulse_starts(pulses.>=thresh)
-find_pulse_stops{T}(pulses::AbstractVector{T}, thresh::T) = find_pulse_stops(pulses.>=thresh)
+find_pulse_starts(pulses::AbstractVector{T}, thresh::T) where T = find_pulse_starts(pulses.>=thresh)
+find_pulse_stops(pulses::AbstractVector{T}, thresh::T) where T = find_pulse_stops(pulses.>=thresh)
 find_pulse_starts(com::ImagineSignal; thresh = 1.15 * Unitful.V, sampmap = :world) = find_pulse_starts(get_samples(com; sampmap=sampmap).data, thresh)
 find_pulse_stops(com::ImagineSignal; thresh = 1.15 * Unitful.V, sampmap = :world) = find_pulse_stops(get_samples(com; sampmap=sampmap).data, thresh)
 
-count_pulses{T}(pulses::AbstractVector{T}, thresh::T) = length(find_pulse_starts(pulses, thresh))
+count_pulses(pulses::AbstractVector{T}, thresh::T) where T = length(find_pulse_starts(pulses, thresh))
 
 #default threshold is half of 3.3V TTL pulse -> 1.15V
 count_pulses(com::ImagineSignal; thresh = isdigital(com) ? true : 1.15 * Unitful.V, sampmap = :world) = count_pulses(get_samples(com; sampmap = sampmap).data, thresh)

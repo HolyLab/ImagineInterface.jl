@@ -1,24 +1,24 @@
-immutable RepeatedValue{T}
+struct RepeatedValue{T}
     n::Int
     value::T
 end
 
-value{T}(rv::RepeatedValue{T}) = rv.value
-count{T}(rv::RepeatedValue{T}) = rv.n
+value(rv::RepeatedValue{T}) where T = rv.value
+count(rv::RepeatedValue{T}) where T = rv.n
 
-convert{T}(::Type{RepeatedValue{T}}, rv::RepeatedValue) = RepeatedValue{T}(rv.n, rv.value)
+convert(::Type{RepeatedValue{T}}, rv::RepeatedValue{S}) where {T,S} = RepeatedValue{T}(count(rv), value(rv))
 
 "RLEVector is a run-length encoded vector"
 const RLEVector{T} = Vector{RepeatedValue{T}}
-full_length{T}(vec::RLEVector{T}) = sum(map(count, vec))
+full_length(vec::RLEVector{T}) where T = sum(map(count, vec))
 
 #convert to RLEVector
 # Use the first "real" value to infer the type. Not type-stable.
 convert(::Type{RLEVector}, v::AbstractVector) = isempty(v) ?
 convert(RLEVector{Any}, v) :
 convert(RLEVector{typeof(v[2])}, v)
-convert{T}(::Type{RLEVector{T}}, v::RLEVector{T}) = v
-convert{T,S}(::Type{RLEVector{T}}, v::RLEVector{S}) = [convert(RepeatedValue{T}, rv) for rv in v]
+convert(::Type{RLEVector{T}}, v::RLEVector{T}) where T = v
+convert(::Type{RLEVector{T}}, v::RLEVector{S}) where {T,S} = [convert(RepeatedValue{T}, rv) for rv in v]
 convert(::Type{RLEVector}, v::RLEVector) = v
 
 #convert from RLEVector
@@ -28,23 +28,23 @@ function convert(::Type{Vector{T}}, v::RLEVector{T}) where {T}
     cur_stop = 1
     for rv in v
         cur_stop = cur_start + count(rv) - 1
-        output[cur_start:cur_stop] = value(rv)
+        output[cur_start:cur_stop] .= value(rv)
         cur_start = cur_stop + 1
     end
     return output
 end
 
-function convert{T,S}(::Type{RLEVector{T}}, v::AbstractVector{S})
+function convert(::Type{RLEVector{T}}, v::V) where {T,V<:AbstractVector}
     iseven(length(v)) || error("not a run-length encoded vector (length is odd)")
     n = length(v) ÷ 2
-    out = Vector{RepeatedValue{T}}(n)
+    out = Vector{RepeatedValue{T}}(undef, n)
     for i = 1:n
         out[i] = RepeatedValue{T}(v[2i-1], v[2i])
     end
     out
 end
 
-type ImagineSignal{Vectype<:AbstractVector}
+mutable struct ImagineSignal{Vectype<:AbstractVector}
     chan_name::String
     daq_chan_name::String
     rig_name::String
@@ -54,6 +54,11 @@ type ImagineSignal{Vectype<:AbstractVector}
     cumlength::Vector{Int}
     mapper::SampleMapper
 end
+
+ImagineSignal(chan_name, daq_chan_name, rig_name, sequences, sequence_names,
+              sequence_lookup, cumlength, mapper) =
+ImagineSignal(String(chan_name), String(daq_chan_name), String(rig_name),
+              sequences, sequence_names, sequence_lookup, cumlength, mapper)
 
 function show(io::IO, com::ImagineSignal)
     if isdigital(com)
@@ -86,22 +91,11 @@ duration(com::ImagineSignal) = upreferred(length(com)/samprate(com))
 Base.size(C::ImagineSignal)    = length(C)
 Base.isempty(com::ImagineSignal) = isempty(cumlength(com))
 
-==(com1::ImagineSignal, com2::ImagineSignal) = fieldnames_equal(com1, com2, union(fieldnames(com1), fieldnames(com2)))
-
-function fieldnames_equal(com1::ImagineSignal, com2::ImagineSignal, nms::Vector{Symbol})
-    is_eq = true
-    for nm in nms
-        if getfield(com1, nm) != getfield(com2, nm)
-            is_eq = false
-            break
-        end
-    end
-    return is_eq
-end
+==(com1::ImagineSignal, com2::ImagineSignal) = fieldnames_equal(com1, com2)
 
 function is_similar(com1::ImagineSignal, com2::ImagineSignal)
     can_differ = [:sequences; :sequence_names; :sequence_lookup; :cumlength] #fields related to the count and values of samples
-    must_match = setdiff(union(fieldnames(com1), fieldnames(com2)), can_differ)
+    must_match = setdiff(union(fieldnames(typeof(com1)), fieldnames(typeof(com2))), can_differ)
     return fieldnames_equal(com1, com2, must_match)
 end
 
@@ -130,10 +124,10 @@ interval_world(com::ImagineSignal) = interval_world(mapper(com))
 cumlength(com::ImagineSignal) = com.cumlength
 samprate(com::ImagineSignal) = samprate(mapper(com))
 set_samprate!(com::ImagineSignal, r::Int) = set_samprate!(mapper(com), r)
-iscompressed{T<:RLEVector}(com::ImagineSignal{T}) = true
-iscompressed{T}(com::ImagineSignal{T}) = false
+iscompressed(com::ImagineSignal{T}) where T<:RLEVector = true
+iscompressed(com::ImagineSignal{T}) where T = false
 
-function calc_cumlength!{T<:AbstractVector}(output::Vector{Int}, seqs::Vector{T})
+function calc_cumlength!(output::Vector{Int}, seqs::Vector{T}) where T<:AbstractVector
     if !isempty(seqs)
         output[1] = length(seqs[1])
         for i = 2:length(seqs)
@@ -142,7 +136,7 @@ function calc_cumlength!{T<:AbstractVector}(output::Vector{Int}, seqs::Vector{T}
     end
     return output
 end
-function calc_cumlength!{RV<:RLEVector}(output::Vector{Int}, seqs::Vector{RV})
+function calc_cumlength!(output::Vector{Int}, seqs::Vector{RV}) where RV<:RLEVector
     if !isempty(seqs)
         output[1] = sum(s.n for s in seqs[1])
         for i = 2:length(seqs)
@@ -154,15 +148,15 @@ end
 
 recalculate_cumlength!(com) = calc_cumlength!(com.cumlength, sequences(com))
 
-mapped2raw{Traw, TV, TW}(seq::AbstractVector{Traw}, mapper::SampleMapper{Traw, TV, TW}) = mappedarray(bounds_check(mapper), seq)
+mapped2raw(seq::AbstractVector{Traw}, mapper::SampleMapper{Traw, TV, TW}) where {Traw,TV,TW} = mappedarray(bounds_check(mapper), seq)
 #Digital signals use the same types for raw and world samples, so no need to map them
-mapped2raw{Traw, TV}(seq::AbstractVector{Traw}, mapper::SampleMapper{Traw, TV, Traw}) = mappedarray(bounds_check(mapper), seq)
-mapped2raw{Traw, TV1, TV2<:HasVoltageUnits, TW}(seq::AbstractVector{TV2}, mapper::SampleMapper{Traw, TV1, TW}) = mappedarray(volts2raw(mapper), seq)
-mapped2raw{Traw, TV, TW}(seq::AbstractVector{TW}, mapper::SampleMapper{Traw, TV, TW}) = mappedarray(world2raw(mapper), seq)
+mapped2raw(seq::AbstractVector{Traw}, mapper::SampleMapper{Traw, TV, Traw}) where {Traw,TV} = mappedarray(bounds_check(mapper), seq)
+mapped2raw(seq::AbstractVector{TV2}, mapper::SampleMapper{Traw, TV1, TW}) where {Traw,TV1,TV2<:HasVoltageUnits,TW} = mappedarray(volts2raw(mapper), seq)
+mapped2raw(seq::AbstractVector{TW}, mapper::SampleMapper{Traw, TV, TW}) where {Traw,TV,TW} = mappedarray(world2raw(mapper), seq)
 #attempt conversion when Quantity types don't exactly match (Float32 vs Float64 precision, for example)
-mapped2raw{Traw, TV, TW, T}(seq::AbstractVector{T}, mapper::SampleMapper{Traw, TV, TW}) = mapped2raw(map(x->convert(TW, x), seq), mapper)
+mapped2raw(seq::AbstractVector{T}, mapper::SampleMapper{Traw, TV, TW}) where {Traw,TV,TW,T} = mapped2raw(map(x->convert(TW, x), seq), mapper)
 
-function compress!{T}(output::RLEVector{T}, input::AbstractVector{T})
+function compress!(output::RLEVector{T}, input::AbstractVector{T}) where T
     if isempty(input)
         return output
     end
@@ -181,8 +175,8 @@ function compress!{T}(output::RLEVector{T}, input::AbstractVector{T})
     return output
 end
 
-function compress{T}(input::AbstractVector{T})
-    output = Vector{RepeatedValue{T}}(0)
+function compress(input::AbstractVector{T}) where T
+    output = Vector{RepeatedValue{T}}(undef, 0)
     return compress!(output, input)
 end
 compress(input::RLEVector) = input
@@ -206,23 +200,23 @@ function get_samples(com::ImagineSignal, istart::Int, istop::Int; sampmap=:world
     if sampmap == :world || sampmap == :volts
         f0 = raw2volts(mapper(com))
         f0inv = volts2raw(mapper(com))
-        datm = mappedarray((f0,f0inv), datm)
+        datm = mappedarray(f0, f0inv, datm)
     end
     if sampmap == :world
         f1 = volts2world(mapper(com))
         f1inv = world2volts(mapper(com))
-        datm = mappedarray((f1, f1inv), datm)
+        datm = mappedarray(f1, f1inv, datm)
     end
     tstart = (istart-1) / samprate(com)
     tstop = (istop-1) / samprate(com)
-    ax = Axis{:time}(linspace(tstart, tstop, nsamps))
+    ax = Axis{:time}(range(tstart, stop=tstop, length=nsamps))
     return AxisArray(datm, ax)
 end
 get_samples(com::ImagineSignal; sampmap=:world) = get_samples(com, 1, length(com); sampmap=sampmap)
 function get_samples(com::ImagineSignal, sequence_name::String; sampmap = :world)
     #find start and stop indices of the first occurence of that sequence
     seqi = findfirst(x->x==sequence_name, sequence_names(com))
-    if seqi == 0
+    if seqi == nothing
         error("Sequence name not found")
     end
     if seqi == 1
@@ -235,10 +229,10 @@ function get_samples(com::ImagineSignal, sequence_name::String; sampmap = :world
 end
 
 #This version gets called for input signals
-get_samples_raw{T<:AbstractVector}(com::ImagineSignal{T}, istart::Int, istop::Int) = sequences(com)[1][istart:istop]
+get_samples_raw(com::ImagineSignal{T}, istart::Int, istop::Int) where T<:AbstractVector = sequences(com)[1][istart:istop]
 
 #This version gets called for output signals
-function get_samples_raw{T<:RLEVector}(com::ImagineSignal{T}, istart::Int, istop::Int)
+function get_samples_raw(com::ImagineSignal{T}, istart::Int, istop::Int) where T<:RLEVector
     if istart < 1 || istop > length(com) #bounds check
         error("The requested time interval is out of bounds")
     end
@@ -299,13 +293,13 @@ function get_samples_raw{T<:RLEVector}(com::ImagineSignal{T}, istart::Int, istop
     return output
 end
 
-function add_sequence!{T<:RLEVector, TS}(com::ImagineSignal{T}, seqname::String, sequence::AbstractVector{TS})
+function add_sequence!(com::ImagineSignal{T}, seqname::AbstractString, sequence::AbstractVector{TS}) where {T<:RLEVector,TS}
     cseq = compress(sequence, mapper(com))
     add_sequence!(com, seqname, cseq)
 end
 
 #This gets called for input signals
-function add_sequence!{T, TS}(sig::ImagineSignal{T}, seqname::String, sequence::TS)
+function add_sequence!(sig::ImagineSignal{T}, seqname::AbstractString, sequence::TS) where {T,TS}
     seqdict = sequence_lookup(sig)
     @assert length(sequence) >= 1
     if haskey(seqdict, seqname)
@@ -315,7 +309,7 @@ function add_sequence!{T, TS}(sig::ImagineSignal{T}, seqname::String, sequence::
     end
 end
 
-function add_sequence!{T<:RLEVector}(com::ImagineSignal{T}, seqname::String, sequence::T)
+function add_sequence!(com::ImagineSignal{T}, seqname::AbstractString, sequence::T) where T<:RLEVector
     seqdict = sequence_lookup(com)
     @assert full_length(sequence) >= 1
     if haskey(seqdict, seqname)
@@ -325,7 +319,7 @@ function add_sequence!{T<:RLEVector}(com::ImagineSignal{T}, seqname::String, seq
     end
 end
 
-function append!(com::ImagineSignal{T}, seqname::String) where {T<:RLEVector}
+function append!(com::ImagineSignal{T}, seqname::AbstractString) where T<:RLEVector
     seqdict = sequence_lookup(com)
     if !haskey(seqdict, seqname)
         error("The requested sequence name was not found.  You most first add the sequence with add_sequence!(com, seqname, sequence), or instead you can add it and append it at the same time with append!(com, seqname, sequence)")
@@ -333,11 +327,11 @@ function append!(com::ImagineSignal{T}, seqname::String) where {T<:RLEVector}
         #TODO: run safety checks here
         #find the length of this sequence and append to cumlength vector
         seqi = findfirst(x->x==seqname, sequence_names(com))
-	push!(sequence_names(com), seqname)
+        push!(sequence_names(com), seqname)
         newseq = sequence_lookup(com)[seqname]
-	push!(sequences(com), newseq)
+        push!(sequences(com), newseq)
         lseq = 0
-        if seqi == 0 #we didn't use this sequence yet
+        if seqi == nothing #we didn't use this sequence yet
             lseq = sum(map(count, newseq))
         elseif seqi == 1
             lseq = cumlength(com)[1]
@@ -352,8 +346,8 @@ end
 append!(com::ImagineSignal{T}, seqlist::V) where {T<:RLEVector, V<:AbstractVector{String}} = foreach(x->append!(com,x), seqlist)
 
 #this one gets called when appending to input signals
-function append!{T, TS}(com::ImagineSignal{T}, seqname::String, sequence::AbstractVector{TS})
-    warn("You are appending to an input signal.  This can be useful for testing, but it does not influence the operation of Imagine.")
+function append!(com::ImagineSignal{T}, seqname::AbstractString, sequence::AbstractVector{TS}) where {T,TS}
+    @warn "You are appending to an input signal.  This can be useful for testing, but it does not influence the operation of Imagine."
     @assert length(sequence) >= 1
     rawseq = mapped2raw(sequence, mapper(com))[:]
     add_sequence!(com, seqname, rawseq)
@@ -363,12 +357,12 @@ function append!{T, TS}(com::ImagineSignal{T}, seqname::String, sequence::Abstra
     return com
 end
 
-function append!{T<:RLEVector, TS}(com::ImagineSignal{T}, seqname::String, sequence::AbstractVector{TS})
+function append!(com::ImagineSignal{T}, seqname::AbstractString, sequence::AbstractVector{TS}) where {T<:RLEVector,TS}
     cseq = compress(sequence, mapper(com))
     return append!(com, seqname, cseq)
 end
 
-function append!{T<:RLEVector}(com::ImagineSignal{T}, seqname::String, sequence::T)
+function append!(com::ImagineSignal{T}, seqname::AbstractString, sequence::T) where T<:RLEVector
     #TODO: run safety checks here
     @assert full_length(sequence) >= 1
     add_sequence!(com, seqname, sequence)
@@ -380,7 +374,7 @@ end
 
 #Repeat the entire sequence currently described by com nreps times
 #(Equivalent to calling append!(com, seqname) nreps times when seqname is the only sequence in com)
-function replicate!{T<:RLEVector}(com::ImagineSignal{T}, nreps::Int)
+function replicate!(com::ImagineSignal{T}, nreps::Int) where T<:RLEVector
     #TODO: run safety checks here
     names_to_append = deepcopy(sequence_names(com))
     for n = 1:nreps
@@ -391,7 +385,7 @@ function replicate!{T<:RLEVector}(com::ImagineSignal{T}, nreps::Int)
     return com
 end
 
-function pop!{T<:RLEVector}(com::ImagineSignal{T})
+function pop!(com::ImagineSignal{T}) where T<:RLEVector
     pop!(cumlength(com))
     seq = pop!(sequences(com))
     nm = pop!(sequence_names(com))
@@ -412,7 +406,7 @@ function empty!(sig::ImagineSignal{T}; clear_library = false) where {T}
     return sig
 end
 
-function replace!{T<:RLEVector, TS}(com::ImagineSignal{T}, seqname::String, sequence::AbstractVector{TS})
+function Base.replace!(com::ImagineSignal{T}, seqname::AbstractString, sequence::AbstractVector{TS}) where {T<:RLEVector, TS}
     seqdict = sequence_lookup(com)
     if !haskey(seqdict, seqname)
         error("The requested sequence name was not found.  To add a new sequence by this name, use `append!(com, seqname, sequence)`")
@@ -421,7 +415,7 @@ function replace!{T<:RLEVector, TS}(com::ImagineSignal{T}, seqname::String, sequ
         cseq = compress(sequence, mapper(com))
         @assert full_length(cseq) >= 1
         seqdict[seqname] = cseq
-        seqidxs = find(x->x==seqname, sequence_names(com))
+        seqidxs = findall(x->x==seqname, sequence_names(com))
         allseqs = sequences(com)
         for i in seqidxs
             allseqs[i] = cseq

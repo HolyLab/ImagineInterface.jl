@@ -2,10 +2,14 @@ __precompile__()
 
 module ImagineInterface
 
-using JSON, Unitful, UnitAliases
-using MappedArrays, AxisArrays, IntervalSets, DataStructures, ImagineFormat, ImagineHardware, DSP
+using JSON, Unitful, UnitAliases, Random, Mmap
+using MappedArrays, IntervalSets, DataStructures, DSP
+using ImagineFormat, ImagineHardware
 import ImagineHardware:samprate
-import Base: convert, show, length, size, isempty, ==, append!, pop!, empty! #, scale
+using AxisArrays
+const axes = Base.axes
+
+import Base: convert, show, length, size, isempty, ==, append!, pop!, empty!, replace!#, scale
 
 using Unitful: μm, s, Hz, V
 

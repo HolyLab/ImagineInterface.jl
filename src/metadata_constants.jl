@@ -62,29 +62,29 @@ const LASER_OFF_TIME = Dict()
 const CAMERA_ON_TIME = Dict()
 const CAMERA_OFF_TIME = Dict()
 #Utility functions for querying rig channel information
-daq_channel_number(ch::String) = parse(Int, last(split("AO0", ['.', 'I', 'O'])))
+daq_channel_number(ch::AbstractString) = parse(Int, last(split("AO0", ['.', 'I', 'O'])))
 
-isfree(daq_chan::String, rig::String) = !in(daq_chan, FIXED_DAQ_CHANS[rig])
-isdigital(daq_chan::String, rig::String) = in(daq_chan, DI_CHANS[rig]) || in(daq_chan, DO_CHANS[rig])
-isoutput(daq_chan::String, rig::String) = in(daq_chan, AO_CHANS[rig]) || in(daq_chan, DO_CHANS[rig])
-ispos(daq_chan::String, rig::String) = in(daq_chan, POS_CONTROL_CHANS[rig])
-isposmonitor(daq_chan::String, rig::String) = in(daq_chan, POS_MONITOR_CHANS[rig])
-iscam(daq_chan::String, rig::String) = in(daq_chan, CAM_CONTROL_CHANS[rig])
-iscammonitor(daq_chan::String, rig::String) = in(daq_chan, CAM_MONITOR_CHANS[rig])
-islas(daq_chan::String, rig::String) = in(daq_chan, LAS_CONTROL_CHANS[rig])
-isstim(daq_chan::String, rig::String) = in(daq_chan, STIM_CHANS[rig])
-isgalvo(daq_chan::String, rig::String) = in(daq_chan, GALVO_CONTROL_CHANS[rig])
-isgalvomonitor(daq_chan::String, rig::String) = in(daq_chan, GALVO_MONITOR_CHANS[rig])
+isfree(daq_chan::AbstractString, rig::AbstractString) = !in(daq_chan, FIXED_DAQ_CHANS[rig])
+isdigital(daq_chan::AbstractString, rig::AbstractString) = in(daq_chan, DI_CHANS[rig]) || in(daq_chan, DO_CHANS[rig])
+isoutput(daq_chan::AbstractString, rig::AbstractString) = in(daq_chan, AO_CHANS[rig]) || in(daq_chan, DO_CHANS[rig])
+ispos(daq_chan::AbstractString, rig::AbstractString) = in(daq_chan, POS_CONTROL_CHANS[rig])
+isposmonitor(daq_chan::AbstractString, rig::AbstractString) = in(daq_chan, POS_MONITOR_CHANS[rig])
+iscam(daq_chan::AbstractString, rig::AbstractString) = in(daq_chan, CAM_CONTROL_CHANS[rig])
+iscammonitor(daq_chan::AbstractString, rig::AbstractString) = in(daq_chan, CAM_MONITOR_CHANS[rig])
+islas(daq_chan::AbstractString, rig::AbstractString) = in(daq_chan, LAS_CONTROL_CHANS[rig])
+isstim(daq_chan::AbstractString, rig::AbstractString) = in(daq_chan, STIM_CHANS[rig])
+isgalvo(daq_chan::AbstractString, rig::AbstractString) = in(daq_chan, GALVO_CONTROL_CHANS[rig])
+isgalvomonitor(daq_chan::AbstractString, rig::AbstractString) = in(daq_chan, GALVO_MONITOR_CHANS[rig])
 
 #For querying rig camera info
-function chip_size(rig::String)
+function chip_size(rig::AbstractString)
     if !in(rig, RIGS)
         error("Unrecognized rig")
     end
     return RIG_CHIP_SIZES[rig]
 end
 
-function max_framerate(rig::String, hsize::Int, vsize::Int)
+function max_framerate(rig::AbstractString, hsize::Int, vsize::Int)
     if !in(rig, RIGS)
         error("Unrecognized rig")
     end
@@ -92,7 +92,7 @@ function max_framerate(rig::String, hsize::Int, vsize::Int)
 end
 
 #returns the size of the largest ROI that can be captured at a desired framerate
-function max_roi(rig::String, framerate::HasInverseTimeUnits)
+function max_roi(rig::AbstractString, framerate::HasInverseTimeUnits)
     if !in(rig, RIGS)
         error("Unrecognized rig")
     end

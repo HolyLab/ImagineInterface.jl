@@ -1,5 +1,5 @@
-using ImagineInterface, Unitful, IntervalSets
-using Base.Test
+using ImagineInterface, Unitful, IntervalSets, Statistics
+using Test
 
 ##################################BIDIRECTIONAL STACK########################################3
 sample_rate = 50000*Unitful.s^-1
@@ -33,9 +33,9 @@ samps_cam_back = gen_pulses(nsamps_stack, exp_intervals_back)
 @test all(map(IntervalSets.width, exp_intervals_fwd) .== 549)
 @test all(map(IntervalSets.width, exp_intervals_back) .== 549)
 #exposure duration
-@test IntervalSets.width(exp_intervals_fwd[1]) / sample_rate ≈ exp_time atol=1 / sample_rate
+@test isapprox(IntervalSets.duration(exp_intervals_fwd[1]) / sample_rate, exp_time; atol=1/sample_rate)
 #laser duration
-@test IntervalSets.width(las_intervals_fwd[1]) / sample_rate ≈ flash_frac * exp_time atol=1 / sample_rate
+@test isapprox(IntervalSets.duration(las_intervals_fwd[1]) / sample_rate, flash_frac*exp_time; atol=(1/sample_rate))
 @test posfwd[1] == pmin
 @test posfwd[end] < pmax
 @test posback[1] == pmax
@@ -120,7 +120,7 @@ posuni, posreset = gen_sawtooth(pmin, pmax, stack_time, stack_time, sample_rate)
 flash_frac_ocpi1 = 1.1 #flashing per-exposure doesn't work well on ocpi1
 d2 = gen_unidirectional_stack(pmin, pmax, z_spacing, stack_time, stack_time, exp_time, sample_rate, flash_frac_ocpi1; z_pad = z_pad)
 @test length(posreset) == length(posback)
-@test length(find(x->x==1, diff(d2["camera"]))) == length(exp_intervals_fwd) #count pulses
+@test length(findall(x->x==1, diff(d2["camera"]))) == length(exp_intervals_fwd) #count pulses
 @test d2["nframes"] == length(exp_intervals_fwd)
 
 #write it
@@ -171,8 +171,8 @@ pset = 0.0 * Unitful.μm
 inter_exp_time = 0.0001 * Unitful.s #The time between exposure pulses
 d3 = gen_2d_timeseries(pset, 10, exp_time, inter_exp_time, sample_rate, flash_frac)
 @test all(d3["positioner"] .== pset)
-@test length(find(x->x==1, diff(d3["camera"]))) == 10
-@test length(find(x->x==1, diff(d3["laser"]))) == 10
+@test length(findall(x->x==1, diff(d3["camera"]))) == 10
+@test length(findall(x->x==1, diff(d3["laser"]))) == 10
 @test (exp_time + inter_exp_time) * 10 * sample_rate ≈ length(d3["camera"])
 
 

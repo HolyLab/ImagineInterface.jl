@@ -1,4 +1,4 @@
-using Base.Test
+using Test
 
 using JSON, Unitful, AxisArrays
 using ImagineInterface
@@ -55,11 +55,11 @@ sampsa = get_samples(getname(allcoms, "axial piezo") , 1, nsamps; sampmap=:world
 @test all(sampsa0.==sampsa)
 
 @test unit(sampsa[1]) == Unitful.μm
-axs = axes(sampsa)
+axs = AxisArrays.axes(sampsa)
 @test length(axs) == 1
 axsv = axisvalues(axs[1])
 @test length(axsv) == 1
-@test axsv[1] == linspace(0.0*Unitful.s, 4.74238*Unitful.s, nsamps)
+@test axsv[1] == range(0.0*Unitful.s, stop=4.74238*Unitful.s, length=nsamps)
 
 #voltage-mapped, analog
 sampsa = get_samples(pos, 1, nsamps; sampmap=:volts)
@@ -142,20 +142,20 @@ galvo_mons = getgalvomonitors(oc2)
 
 #convenience
 digs = getdigital(allcoms)
-for c in digs
-    if isoutput(c)
-        @test in(daq_channel(c), ImagineInterface.DO_CHANS[rig])
+for di in digs
+    if isoutput(di)
+        @test in(daq_channel(di), ImagineInterface.DO_CHANS[rig])
     else
-        @test in(daq_channel(c), ImagineInterface.DI_CHANS[rig])
+        @test in(daq_channel(di), ImagineInterface.DI_CHANS[rig])
     end
 end
 
 angs = getanalog(allcoms)
-for c in angs
-    if isoutput(c)
-        @test in(daq_channel(c), ImagineInterface.AO_CHANS[rig])
+for an in angs
+    if isoutput(an)
+        @test in(daq_channel(an), ImagineInterface.AO_CHANS[rig])
     else
-        @test in(daq_channel(c), ImagineInterface.AI_CHANS[rig])
+        @test in(daq_channel(an), ImagineInterface.AI_CHANS[rig])
     end
 end
 

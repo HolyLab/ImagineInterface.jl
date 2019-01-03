@@ -11,7 +11,7 @@
 #      Assuming that the combined sequence passes validation, add the transition to ValidationState
 #   
 
-type ValidationState
+mutable struct ValidationState
     sequences::Set{String}
     transitions::Dict{String, Set{String}}
 end

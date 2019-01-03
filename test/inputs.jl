@@ -1,5 +1,5 @@
 using ImagineInterface, ImagineFormat
-using Base.Test
+using Test
 using Unitful
 import Unitful:s
 
@@ -39,7 +39,7 @@ for (i, r) in enumerate(ai_recs)
         @test hdr["rig"] == rig_name(com)
         @test mapper(com).samprate == hdr["scan rate"] * s^-1
         @test length(r) == length(com)
-        @test duration(r) == duration(com)
+        @test ImagineInterface.duration(r) == ImagineInterface.duration(com)
     end
 end
 
@@ -59,11 +59,11 @@ for (i, r) in enumerate(di_recs)
         @test hdr["rig"] == rig_name(com)
         @test mapper(com).samprate == hdr["scan rate"] * s^-1
         @test length(r) == length(com)
-        @test duration(r) == duration(com)
+        @test ImagineInterface.duration(r) == ImagineInterface.duration(com)
     end
 end
 
-@test length(di_labs) - length(find(x->x=="unused", di_labs)) == length(di_recs)
+@test length(di_labs) - length(findall(x->x=="unused", di_labs)) == length(di_recs)
 
 nexp_di = count_pulses(getname(di_recs, "camera1 frame monitor")) 
 nexp_do = count_pulses(getname(do_coms, "camera1"))

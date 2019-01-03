@@ -1,5 +1,5 @@
 using ImagineInterface
-using Base.Test, IntervalSets, Unitful
+using Test, IntervalSets, Unitful
 
 import ImagineInterface: check_max_speed, ValidationState, check_piezo, check_piezos
 import ImagineInterface: check_pulse_duration, check_interpulse_duration, check_pulse_interval
@@ -79,7 +79,7 @@ function gen_samp_seq(start_is, stop_is, tot_length)
     seq = falses(tot_length)
     for i = 1:length(start_is)
         @assert start_is[i] <= stop_is[i]
-        seq[start_is[i]:stop_is[i]] = true
+        seq[start_is[i]:stop_is[i]] .= true
     end
     return seq
 end

@@ -1,11 +1,10 @@
-using Ranges #delete this when we drop 0.5 support
 
 #lowpass filter a command vector
 function apply_lp(mod_samps::AbstractVector, sampr::HasInverseTimeUnits, cutoff::HasInverseTimeUnits)
     if isinf(cutoff)
         return mod_samps
     end
-    mod_samps3 = repmat(mod_samps, 11)
+    mod_samps3 = repeat(mod_samps, 11)
     fs = ustrip(uconvert(Unitful.Hz, sampr))
     cutoff = ustrip(uconvert(Unitful.Hz, cutoff))
     responsetype = Lowpass(cutoff; fs=fs)
@@ -20,7 +19,7 @@ function calc_num_samps(duration::HasTimeUnits, sample_rate::HasInverseTimeUnits
     rounded = round(Int, unrounded)
     rounding_err = abs(rounded - unrounded)/unrounded
     if rounding_err > 0.01
-        warn("The requested duration cannot be achieved to within 1% accuracy with the current sampling rate.  Consider increasing the sampling rate.")
+        @warn "The requested duration cannot be achieved to within 1% accuracy with the current sampling rate.  Consider increasing the sampling rate."
     end
     return rounded
 end
@@ -37,7 +36,7 @@ function slice_positions(pstart::HasLengthUnits, pstop::HasLengthUnits, slice_sp
     if pstart > pstop
         leftover = -leftover
     end
-    return [linspace(pstart + leftover, pstop - leftover, nslices)...]
+    return [range(pstart + leftover, stop=pstop - leftover, length=nslices)...]
 end
 
 #This version first adjusts pmin and pmax to respect padding
@@ -56,7 +55,7 @@ function gen_sweep(pmin::HasLengthUnits, pmax::HasLengthUnits, tsweep::HasTimeUn
     pmaxum = uconvert(Unitful.μm, pmax)
     nsamps = calc_num_samps(tsweep, sample_rate)
     increment = (pmaxum - pminum) / nsamps
-    return Ranges.linspace(pminum, pmaxum-increment, nsamps)
+    return range(pminum, stop=pmaxum-increment, length=nsamps)
 end
 
 #moves at 90% of maximum safe speed from pmin to pmax
@@ -104,8 +103,9 @@ end
 #The `z_pad` kwarg, specified in non-temporal units, will prevent placement of intervals at the extremes of the sample space
 #The `alignment` kwarg determines whether the first interval begins at the first valid sample (:start) or the last interval ends at the last valid sample (:stop)
 #Thus :start and :stop will produce equal results for certain well-dividing sample counts, but most of the time they are different
-function spaced_intervals{TS<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverseTimeUnits}(samples_space::Ranges.LinSpace{TS}, interval_spacing::TS, interval_duration::TT, sample_rate::TTI;
-                                delay::TT=uconvert(unit(TT), 0.0*Unitful.s), z_pad::TS = uconvert(unit(TS), 1.0*Unitful.μm), alignment=:start, rig="ocpi-2")
+function spaced_intervals(samples_space::StepRangeLen{TS}, interval_spacing::TS, interval_duration::TT, sample_rate::TTI;
+                                delay::TT=uconvert(unit(TT), 0.0*Unitful.s), z_pad::TS = uconvert(unit(TS), 1.0*Unitful.μm),
+                                alignment=:start, rig="ocpi-2") where{TS<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverseTimeUnits}
     if !in(alignment, (:start, :stop))
         error("Only :start and :stop alignment is supported")
     end
@@ -117,7 +117,7 @@ function spaced_intervals{TS<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverseT
     dur_samps = calc_num_samps(interval_duration, sample_rate)
     spacing_samps = interval_spacing/samp_length
     if abs(spacing_samps-round(Int, spacing_samps))/spacing_samps > 0.01
-        warn("The requested spacing cannot be achieved to within 1% accuracy with the current sampling rate.  Consider increasing the sampling rate.")
+        @warn "The requested spacing cannot be achieved to within 1% accuracy with the current sampling rate.  Consider increasing the sampling rate."
     end
     spacing_samps = round(Int, spacing_samps)
     if spacing_samps <= dur_samps
@@ -137,7 +137,7 @@ function spaced_intervals{TS<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverseT
     if nintervals == 0
         error("The requested interval_duration is longer than the sampled region.")
     end
-    output = Array{ClosedInterval{Int}}(nintervals)
+    output = Array{ClosedInterval{Int}}(undef, nintervals)
     if alignment == :stop
         offset+=extra
     end
@@ -151,7 +151,7 @@ end
 
 function gen_pulses!(output::Vector{Bool}, pulsevec::Vector{ClosedInterval{Int}}; fillval=true)
     for p in pulsevec
-        output[minimum(p):maximum(p)] = fillval
+        output[minimum(p):maximum(p)] .= fillval
     end
     return output
 end
@@ -171,13 +171,16 @@ function scale(input::ClosedInterval{Int}, frac::Float64)
     return ClosedInterval(ctr - halfw_new, ctr + halfw_new)
 end
 
-function gen_bidirectional_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverseTimeUnits}(pmin::TL, pmax::TL, z_spacing::TL, stack_time::TT, exp_time::TT, sample_rate::TTI, flash_frac::Real; z_pad::TL = 1.0*Unitful.μm, alternate_cameras = false, rig="ocpi-2")
+function gen_bidirectional_stack(pmin::TL, pmax::TL, z_spacing::TL,
+                                 stack_time::TT, exp_time::TT, sample_rate::TTI, flash_frac::Real;
+                                 z_pad::TL = 1.0*Unitful.μm, alternate_cameras = false,
+                                 rig="ocpi-2") where{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverseTimeUnits}
     if pmin == pmax
         error("Use the gen_2d_timeseries function instead of setting pmin and pmax to the same value")
     end
     flash = true
     if flash_frac >= 1.0
-        warn("las_frac was set greater than 1.0, so keeping laser on throughout the stack")
+        @warn "las_frac was set greater than 1.0, so keeping laser on throughout the stack"
         flash = false
     elseif flash_frac <= 0
         error("las_frac must be positive")
@@ -207,7 +210,7 @@ function gen_bidirectional_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasI
     #distance traveled in one exposure time.  We need to adjust padding by that much to make sure that exposures can fit.
     exp_dist = exp_time * abs(pmax - pmin) / stack_time
     if exp_dist > z_pad
-        warn("Increasing z padding by $(exp_dist-z_pad) to leave space for bidirectional exposures\n")
+        @warn "Increasing z padding by $(exp_dist-z_pad) to leave space for bidirectional exposures\n"
     end
     exp_intervals_fwd = spaced_intervals(posfwd, z_spacing, exp_time, sample_rate; delay=delay1samp, z_pad = max(z_pad,exp_dist), alignment=:start, rig=rig)
     flash_nsamps = calc_num_samps(min(flash_frac,1.0) * exp_time, sample_rate)
@@ -243,7 +246,9 @@ function gen_bidirectional_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasI
     end
 end
 
-function gen_stepped_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverseTimeUnits}(pmin::TL, pmax::TL, z_spacing::TL, pause_time::TT, reset_time::TT, exp_time::TT, sample_rate::TTI, flash_frac::Real; rig="ocpi-2")
+function gen_stepped_stack(pmin::TL, pmax::TL, z_spacing::TL, pause_time::TT,
+                           reset_time::TT, exp_time::TT, sample_rate::TTI, flash_frac::Real;
+                           rig="ocpi-2") where{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverseTimeUnits}
     if exp_time > pause_time
         error("Pause duration must be greater than or equal to exposure duration")
     end
@@ -252,7 +257,7 @@ function gen_stepped_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverse
     end
     flash = true
     if flash_frac > 1
-        warn("las_frac was set greater than 1, so defaulting to keeping laser on throughout the stack")
+        @warn "las_frac was set greater than 1, so defaulting to keeping laser on throughout the stack"
         flash = false
     elseif flash_frac <= 0
         error("las_frac must be positive")
@@ -288,7 +293,7 @@ function gen_stepped_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverse
     nsamps_stack = length(posfwd)
     push!(pause_stops, nsamps_stack)
     #camera pulse intervals
-    exp_intervals = Array{ClosedInterval{Int}}(nslices)
+    exp_intervals = Array{ClosedInterval{Int}}(undef, nslices)
     pause_nsamps = pause_stops[1] - pause_starts[1]
     exp_nsamps = calc_num_samps(exp_time, sample_rate)
     samp_offset = floor(Int, (pause_nsamps - exp_nsamps) / 2) #center the exposure within the positioner pause
@@ -313,13 +318,16 @@ function gen_stepped_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverse
 end
 
 
-function gen_unidirectional_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverseTimeUnits}(pmin::TL, pmax::TL, z_spacing::TL, stack_time::TT, reset_time::TT, exp_time::TT, sample_rate::TTI, flash_frac::Real; z_pad::TL = 1.0*Unitful.μm, rig="ocpi-2")
+function gen_unidirectional_stack(pmin::TL, pmax::TL, z_spacing::TL, stack_time::TT, reset_time::TT,
+                                  exp_time::TT, sample_rate::TTI, flash_frac::Real;
+                                  z_pad::TL = 1.0*Unitful.μm,
+                                  rig="ocpi-2") where{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverseTimeUnits}
     if pmin == pmax
         error("Use the gen_2d_timeseries function instead of setting pmin and pmax to the same value")
     end
     flash = true
     if flash_frac > 1
-        warn("las_frac was set greater than 1, so defaulting to keeping laser on throughout the stack")
+        @warn "las_frac was set greater than 1, so defaulting to keeping laser on throughout the stack"
         flash = false
     elseif flash_frac <= 0
         error("las_frac must be positive")
@@ -355,14 +363,15 @@ function gen_unidirectional_stack{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:Has
     return output
 end
 
-function gen_2d_timeseries{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverseTimeUnits}(position::TL, nframes::Int, exp_time::TT, inter_exp_time::TT, sample_rate::TTI, flash_frac::Real)
+function gen_2d_timeseries(position::TL, nframes::Int, exp_time::TT, inter_exp_time::TT,
+                           sample_rate::TTI, flash_frac::Real) where{TL<:HasLengthUnits, TT<:HasTimeUnits, TTI<:HasInverseTimeUnits}
     cycle_time = exp_time + inter_exp_time
     exp_samps = round(Int, exp_time * sample_rate)
     cycle_samps = round(Int, cycle_time * sample_rate)
     inter_exp_samps = round(Int, inter_exp_time * sample_rate)
     nsamps = round(Int, nframes * cycle_time * sample_rate)
     pos = fill(position, nsamps)
-    exp_intervals = Array{ClosedInterval{Int}}(nframes)
+    exp_intervals = Array{ClosedInterval{Int}}(undef, nframes)
     curstart = div(inter_exp_samps,2) #offset by half the interframe time
     for i = 1:nframes
         exp_intervals[i] = ClosedInterval(curstart, curstart+exp_samps-1)

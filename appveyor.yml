@@ -30,18 +30,31 @@ install:
 
 build_script:
   - echo "%JL_BUILD_SCRIPT%"
-  - C:\julia\bin\julia -e "%JL_BUILD_SCRIPT%"
-
+    #- C:\julia\bin\julia -e "%JL_BUILD_SCRIPT%"
+  - C:\julia\bin\julia -e 'using Pkg, LibGit2;
+            user_regs = joinpath(DEPOT_PATH[1],"registries");
+            mkpath(user_regs);
+            all_registries = Dict("General" => "https://github.com/JuliaRegistries/General.git",
+                                  "HolyLabRegistry" => "https://github.com/HolyLab/HolyLabRegistry.git");
+            Base.shred!(LibGit2.CachedCredentials()) do creds
+              for (reg, url) in all_registries
+                path = joinpath(user_regs, reg);
+                LibGit2.with(Pkg.GitTools.clone(url, path; header = "registry $reg from $(repr(url))")) do repo end
+              end
+            end'
+            #LibGit2.with(Pkg.GitTools.clone(url, path; header = "registry $reg from $(repr(url))", credentials = creds)) do repo end
+            #"HolyLabRegistry" => "git@github.com:HolyLab/HolyLabRegistry.git");
 test_script:
   - echo "%JL_TEST_SCRIPT%"
-  - C:\julia\bin\julia -e 'using Pkg, LibGit2;
-              user_regs = joinpath(DEPOT_PATH[1],"registries");
-              mkpath(user_regs);
-              all_registries = Dict("General" => "https://github.com/JuliaRegistries/General.git",
-                            "HolyLabRegistry" => "git@github.com:HolyLab/HolyLabRegistry.git");
-              Base.shred!(LibGit2.CachedCredentials()) do creds
-                for (reg, url) in all_registries
-                  path = joinpath(user_regs, reg);
-                  LibGit2.with(Pkg.GitTools.clone(url, path; header = "registry $reg from $(repr(url))", credentials = creds)) do repo end
-                end
-              end'
+  - C:\julia\bin\julia -e "%JL_TEST_SCRIPT%"
+    #  - C:\julia\bin\julia -e 'using Pkg, LibGit2;
+    #            user_regs = joinpath(DEPOT_PATH[1],"registries");
+    #            mkpath(user_regs);
+    #            all_registries = Dict("General" => "https://github.com/JuliaRegistries/General.git",
+    #                          "HolyLabRegistry" => "git@github.com:HolyLab/HolyLabRegistry.git");
+    #            Base.shred!(LibGit2.CachedCredentials()) do creds
+    #              for (reg, url) in all_registries
+    #                path = joinpath(user_regs, reg);
+    #                LibGit2.with(Pkg.GitTools.clone(url, path; header = "registry $reg from $(repr(url))", credentials = creds)) do repo end
+    #              end
+    #            end'

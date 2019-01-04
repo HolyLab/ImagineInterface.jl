@@ -4,7 +4,8 @@ os:
   - linux
   - osx
 julia:
-  - 0.6
+  - 0.7
+  - 1.0
 notifications:
   email: false
 git:
@@ -17,18 +18,34 @@ git:
 #  - julia: nightly
 
 ## uncomment and modify the following lines to manually install system packages
-#addons:
-#  apt: # apt-get for linux
-#    packages:
-#    - gfortran
-#before_script: # homebrew for mac
-#  - if [ $TRAVIS_OS_NAME = osx ]; then brew install gcc; fi
+addons:
+  apt:
+    packages:
+      - build-essential
+      - gfortran
+      - pkg-config
+      - hdf5-tools
 
 ## uncomment the following lines to override the default test script
-#script:
-#  - julia -e 'Pkg.clone(pwd()); Pkg.build("ImagineInterface"); Pkg.test("ImagineInterface"; coverage=true)'
+script:
+  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
+  - julia -e 'using Pkg, LibGit2;
+              user_regs = joinpath(DEPOT_PATH[1],"registries");
+              mkpath(user_regs);
+              all_registries = Dict("General" => "https://github.com/JuliaRegistries/General.git",
+                            "HolyLabRegistry" => "git@github.com:HolyLab/HolyLabRegistry.git");
+              Base.shred!(LibGit2.CachedCredentials()) do creds
+                for (reg, url) in all_registries
+                  path = joinpath(user_regs, reg);
+                  LibGit2.with(Pkg.GitTools.clone(url, path; header = "registry $reg from $(repr(url))", credentials = creds)) do repo end
+                end
+              end'
+  - julia -e 'using Pkg; Pkg.build(); Pkg.test("ImagineInterface")'
 after_success:
   # push coverage results to Coveralls
   - julia -e 'cd(Pkg.dir("ImagineInterface")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
   # push coverage results to Codecov
   - julia -e 'cd(Pkg.dir("ImagineInterface")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
+  # update the documentation
+  #   - julia -e 'using Pkg; Pkg.add("Documenter")'
+    #  - julia -e 'using ImagineInterface; cd(dirname(dirname(pathof(ImagineInterface)))); ENV["DOCUMENTER_DEBUG"] = "true"; include(joinpath("docs", "make.jl"))'

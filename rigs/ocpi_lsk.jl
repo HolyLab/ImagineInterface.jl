@@ -72,7 +72,7 @@ const ocpi_lsk_mappings = Dict("AO0"=>"axial piezo",
                       "P0.31"=>"diginput6",)
 
 DEFAULT_DAQCHANS_TO_NAMES[rig_key] = ocpi_lsk_mappings
-DEFAULT_NAMES_TO_DAQCHANS[rig_key] = map(reverse, ocpi_lsk_mappings)
+DEFAULT_NAMES_TO_DAQCHANS[rig_key] = dictmap(reverse, ocpi_lsk_mappings)
 
 const ocpi_lsk_pos_ctrl_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["axial piezo"])
 const ocpi_lsk_aochans = map(x->"AO$(x)", [0;2;3]) 

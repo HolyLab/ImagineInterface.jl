@@ -16,6 +16,7 @@ using Unitful: μm, s, Hz, V
 include("metadata_constants.jl")
 #Load hardware parameters for all rigs
 rig_dir = joinpath(dirname(@__DIR__), "rigs")
+dictmap(f, d::T) where T = T((f(p) for p = pairs(d))) #used in rig files
 for rig_file in readdir(rig_dir)
     include(joinpath(rig_dir, rig_file))
 end

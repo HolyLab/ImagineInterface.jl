@@ -41,7 +41,7 @@ script:
                 LibGit2.with(Pkg.GitTools.clone(url, path; header = "registry $reg from $(repr(url))", credentials = creds)) do repo end
               end
             end'
-  - julia -e 'using Pkg; Pkg.build(); Pkg.test("ImagineInterface"; coverage=false)'
+  - julia -e 'using Pkg; Pkg.build(); Pkg.test("ImagineInterface"; coverage=true)'
 after_success:
   # push coverage results to Coveralls
   #- julia -e 'cd(Pkg.dir("ImagineInterface")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'

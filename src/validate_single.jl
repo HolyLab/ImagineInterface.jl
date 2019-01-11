@@ -5,7 +5,7 @@
 #    -sufficient time interval between exposure stop and next exposure start (based on jitter time, see MINIMUM_EXPOSURE_SEPARATION variable
 #    -sufficient time between laser state changes
 
-function check_piezos{TS<:ImagineSignal}(sigs::AbstractVector{TS}; window_sz = 100)
+function check_piezos(sigs::AbstractVector{TS}; window_sz = 100) where TS<:ImagineSignal
     ps = getpositioners(getoutputs(sigs))
     vs = check_piezo(ps[1]; window_sz = window_sz)
     for i = 2:length(ps)
@@ -29,7 +29,7 @@ function check_piezo(pos::ImagineSignal; window_sz = 100, val_state::ValidationS
     max_dist_raw = ceil(Int, (max_dist/width(interval_world(pos))) * width(interval_raw(pos)))
     val_func = (samps, win_sz) -> check_max_speed(samps, max_dist_raw, win_sz)
     if length(pos) < window_sz #should this throw an error?
-        warn("Insufficient samples to check this signal with a window size setting of $window_sz")
+        @warn "Insufficient samples to check this signal with a window size setting of $window_sz"
     else
         try
             window_validate!(val_state, val_func, window_sz, pos)
@@ -136,7 +136,7 @@ function check_pulses(sig::ImagineSignal, on_time::HasTimeUnits, off_time::HasTi
     return true 
 end
 
-check_cameras{TS<:ImagineSignal}(sigs::AbstractVector{TS}) = map(check_camera, getcameras(getoutputs(sigs)))
+check_cameras(sigs::AbstractVector{TS}) where TS<:ImagineSignal = map(check_camera, getcameras(getoutputs(sigs)))
 
 #check framerate, interpulse, intrapulse
 #   the 0->1->0 interval is greater than or equal to CAMERA_ON_TIME
@@ -145,7 +145,7 @@ check_cameras{TS<:ImagineSignal}(sigs::AbstractVector{TS}) = map(check_camera, g
 #   max_framerate = max_framerate(rig, chip_size(rig)...)
 function check_camera(cam::ImagineSignal; chip_sz = chip_size(rig_name(cam)))    
     if isempty(cam)
-        warn("Signal $(name(cam)) is empty.  Skipping validation.")
+        @warn "Signal $(name(cam)) is empty.  Skipping validation."
         return true
     end
     rig = rig_name(cam)
@@ -155,7 +155,7 @@ function check_camera(cam::ImagineSignal; chip_sz = chip_size(rig_name(cam)))
     check_pulses(cam, min_on_dur, min_off_dur, max_fr)
 end
 
-check_lasers{TS<:ImagineSignal}(sigs::AbstractVector{TS}) = map(check_laser, getlasers(getoutputs(sigs)))
+check_lasers(sigs::AbstractVector{TS}) where TS<:ImagineSignal = map(check_laser, getlasers(getoutputs(sigs)))
 #check laser pulse duration and frequency
 #Imagine currently checks every transition points(0->1) and calculate frequency between two consecutive transition points
 #We check that:
@@ -164,7 +164,7 @@ check_lasers{TS<:ImagineSignal}(sigs::AbstractVector{TS}) = map(check_laser, get
 #   the 0->1->0->1 interval is unconstrained
 function check_laser(las::ImagineSignal)
     if isempty(las)
-        warn("Signal $(name(las)) is empty.  Skipping validation.")
+        @warn "Signal $(name(las)) is empty.  Skipping validation."
         return true
     end
     rig = rig_name(las)
@@ -174,13 +174,13 @@ function check_laser(las::ImagineSignal)
     check_pulses(las, min_on_dur, min_off_dur, Inf*inv(Unitful.s))
 end
 
-function validate_singles{TS<:ImagineSignal}(sigs::AbstractVector{TS})
+function validate_singles(sigs::AbstractVector{TS}) where TS<:ImagineSignal
     check_piezos(sigs)
     check_cameras(sigs)
     check_lasers(sigs)
 end
 
-function validate_all{TS<:ImagineSignal}(sigs::AbstractVector{TS}; check_is_sufficient = true)
+function validate_all(sigs::AbstractVector{TS}; check_is_sufficient = true) where TS<:ImagineSignal
     validate_group(sigs; check_is_sufficient = check_is_sufficient)
     validate_singles(sigs)
 end

@@ -16,7 +16,7 @@ const d6002_mappings = Dict("AO0"=>"axial piezo",
                       "AI7"=>"analogin6")
 
 DEFAULT_DAQCHANS_TO_NAMES[rig_key] = d6002_mappings
-DEFAULT_NAMES_TO_DAQCHANS[rig_key] = map(reverse, d6002_mappings)
+DEFAULT_NAMES_TO_DAQCHANS[rig_key] = dictmap(reverse, d6002_mappings)
 
 const d6002_aochans = map(x->"AO$(x)", 0:1)
 const d6002_aichans = map(x->"AI$(x)", [0:7...])

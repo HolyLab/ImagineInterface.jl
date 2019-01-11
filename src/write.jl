@@ -51,7 +51,9 @@ compress_seqnames(c::ImagineSignal) = compress(sequence_names(c))
 
 cam_num_from_name(nm::String) = parse(Int, last(nm))
 
-function initialize_outdict{TTI<:HasInverseTimeUnits}(rig::String, seq_lookup::Dict, which_cams, nstacks, frames_per_stack, exp_time, samp_rate::TTI, nsamps, exp_trig_mode, isbidi)
+function initialize_outdict(rig::String, seq_lookup::Dict, which_cams,
+                            nstacks, frames_per_stack, exp_time, samp_rate::TTI,
+                            nsamps, exp_trig_mode, isbidi) where{TTI<:HasInverseTimeUnits}
     out_dict = Dict{String,Any}()
     ana_dict = Dict{String,Any}()
     dig_dict = Dict{String,Any}()
@@ -90,7 +92,7 @@ function _write_commands!(out_dict, coms)
             if isoutput(c) #only write the sequence field for outputs
                 dig_dict[name(c)]["sequence"] = compress(sequence_names(c))
             elseif !isempty(sequence_names(c))
-                warn("Writing the $(name(c)) channel as an input even though it has one or more sample sequences")
+                @warn "Writing the $(name(c)) channel as an input even though it has one or more sample sequences"
             end
         else
             ana_dict[name(c)] = Dict{String,Any}("daq channel"=>daq_channel(c))
@@ -106,7 +108,7 @@ function get_missing_monitors(coms_used)
     output = similar(coms_used, 0)
     for c in coms_used
         if hasmonitor(c)
-            if !isempty(findname(coms_used, monitor_name(c)))
+            if findname(coms_used, monitor_name(c)) != nothing
                 push!(output, getmonitor(c))
             end
         end
@@ -116,7 +118,7 @@ end
 
 function check_cam_param_counts(cams, params, description::String)
     if length(cams) > 1  && length(params) == 1
-        warn("Two camera output signals were supplied with only one $description argument.  Applying this argument to both cameras")
+        @warn "Two camera output signals were supplied with only one $description argument.  Applying this argument to both cameras"
     elseif length(cams) == 1 && length(params) == 2
         error("Two $description parameters were supplied but only one camera is in use")
     elseif length(cams) != length(params)
@@ -146,7 +148,10 @@ function check_cam_meta(coms::Vector{ImagineSignal}, nstacks, nframes_per_stack,
     end
 end
 
-function write_commands(fname::String, coms::Vector{ImagineSignal}, nstacks::NS, nframes_per_stack::NF, exp_time::EXP; exp_trig_mode = ["External Start";], isbidi=false, skip_validation=false) where {NS <: Union{Int, Vector{Int}}, NF <: Union{Int, Vector{Int}}, EXP <: Union{HasTimeUnits, Vector{HasTimeUnits}}}
+function write_commands(fname::String, coms::Vector{ImagineSignal}, nstacks::NS,
+                        nframes_per_stack::NF, exp_time::EXP;
+                        exp_trig_mode = ["External Start";], isbidi=false,
+                        skip_validation=false) where{NS<:Union{Int, Vector{Int}}, NF<:Union{Int, Vector{Int}}, EXP<:Union{HasTimeUnits, Vector{HasTimeUnits}}}
     @assert splitext(fname)[2] == ".json"
     if isa(exp_trig_mode, AbstractString)
         exp_trig_mode = [exp_trig_mode;]
@@ -162,7 +167,7 @@ function write_commands(fname::String, coms::Vector{ImagineSignal}, nstacks::NS,
     which_cams = map(name, getcameras(coms))
     rig = rig_name(first(coms_used))
     seq_lookup = combine_lookups(coms_used)
-    if rig == "ocpi-2" && findname(coms_used, "all lasers")==0
+    if rig == "ocpi-2" && findname(coms_used, "all lasers")==nothing
         ref_sig = first(getoutputs(coms_used))
         rt = rigtemplate("ocpi-2"; sample_rate = samprate(ref_sig))
         all_las = getname(rt, "all lasers")

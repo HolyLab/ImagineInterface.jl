@@ -2,16 +2,21 @@ __precompile__()
 
 module ImagineInterface
 
-using JSON, Unitful, UnitAliases
-using MappedArrays, AxisArrays, IntervalSets, DataStructures, ImagineFormat, ImagineHardware, DSP
+using JSON, Unitful, UnitAliases, Random, Mmap
+using MappedArrays, IntervalSets, DataStructures, DSP
+using ImagineFormat, ImagineHardware
 import ImagineHardware:samprate
-import Base: convert, show, length, size, isempty, ==, append!, pop!, empty! #, scale
+using AxisArrays
+const axes = Base.axes
+
+import Base: convert, show, length, size, isempty, ==, append!, pop!, empty!, replace!#, scale
 
 using Unitful: μm, s, Hz, V
 
 include("metadata_constants.jl")
 #Load hardware parameters for all rigs
 rig_dir = joinpath(dirname(@__DIR__), "rigs")
+dictmap(f, d::T) where T = T((f(p) for p = pairs(d))) #used in rig files
 for rig_file in readdir(rig_dir)
     include(joinpath(rig_dir, rig_file))
 end

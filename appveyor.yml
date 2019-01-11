@@ -29,32 +29,11 @@ install:
   - ps: iex ((new-object net.webclient).DownloadString("https://raw.githubusercontent.com/JuliaCI/Appveyor.jl/version-1/bin/install.ps1"))
 
 build_script:
+  - C:\julia\bin\julia ci_test.jl
   - echo "%JL_BUILD_SCRIPT%"
-    #- C:\julia\bin\julia -e "%JL_BUILD_SCRIPT%"
-  - C:\julia\bin\julia -e 'using Pkg, LibGit2;
-            user_regs = joinpath(DEPOT_PATH[1],"registries");
-            mkpath(user_regs);
-            all_registries = Dict("General" => "https://github.com/JuliaRegistries/General.git",
-                                  "HolyLabRegistry" => "https://github.com/HolyLab/HolyLabRegistry.git");
-            Base.shred!(LibGit2.CachedCredentials()) do creds
-              for (reg, url) in all_registries
-                path = joinpath(user_regs, reg);
-                LibGit2.with(Pkg.GitTools.clone(url, path; header = "registry $reg from $(repr(url))")) do repo end
-              end
-            end'
-            #LibGit2.with(Pkg.GitTools.clone(url, path; header = "registry $reg from $(repr(url))", credentials = creds)) do repo end
-            #"HolyLabRegistry" => "git@github.com:HolyLab/HolyLabRegistry.git");
+  - C:\julia\bin\julia -e "%JL_BUILD_SCRIPT%"
 test_script:
-  - echo "%JL_TEST_SCRIPT%"
+  #- echo "ci_test.jl%"
+  #- C:\julia\bin\julia -e "using Pkg; Pkg.build(); Pkg.test("ImagineInterface")"
+  - echo "%JL_TEST_SCRIPT%
   - C:\julia\bin\julia -e "%JL_TEST_SCRIPT%"
-    #  - C:\julia\bin\julia -e 'using Pkg, LibGit2;
-    #            user_regs = joinpath(DEPOT_PATH[1],"registries");
-    #            mkpath(user_regs);
-    #            all_registries = Dict("General" => "https://github.com/JuliaRegistries/General.git",
-    #                          "HolyLabRegistry" => "git@github.com:HolyLab/HolyLabRegistry.git");
-    #            Base.shred!(LibGit2.CachedCredentials()) do creds
-    #              for (reg, url) in all_registries
-    #                path = joinpath(user_regs, reg);
-    #                LibGit2.with(Pkg.GitTools.clone(url, path; header = "registry $reg from $(repr(url))", credentials = creds)) do repo end
-    #              end
-    #            end'

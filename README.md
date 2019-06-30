@@ -1,7 +1,7 @@
 # ImagineInterface
 [![Build Status](https://travis-ci.com/HolyLab/ImagineInterface.jl.svg?branch=master)](https://travis-ci.org/HolyLab/ImagineInterface)
 [![Build status](https://ci.appveyor.com/api/projects/status/obywii010u9stx5f/branch/master?svg=true)](https://ci.appveyor.com/project/Cody-G/imagineinterface/branch/master)
-[![codecov](https://codecov.io/gh/HolyLab/ImagineInterface/branch/master/graph/badge.svg)](https://codecov.io/gh/HolyLab/ImagineInterface)
+[![codecov](https://codecov.io/gh/HolyLab/ImagineInterface.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/HolyLab/ImagineInterface.jl)
 
 **Note:** Julia 0.6 users should checkout the `julia0.6` branch; `master` works on Julia 0.7/1.x only.
 

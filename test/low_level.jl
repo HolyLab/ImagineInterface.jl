@@ -43,6 +43,7 @@ las1 = getname(allcoms, nm)
 @test isdigital(las1) == true
 @test name(las1) == nm
 @test length(las1) == nsamps
+@test_throws ErrorException getname(allcoms, "nonexistent name")
 
 #show
 show(IOBuffer(), las1)

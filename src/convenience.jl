@@ -4,7 +4,7 @@ findname(coms::AbstractVector{T}, nm::AbstractString) where{T<:ImagineSignal} =
     findfirst(x->name(x) == nm, coms)
 function getname(coms::AbstractVector{T}, nm::AbstractString) where{T<:ImagineSignal}
     namei = findname(coms, nm)
-    if namei == 0
+    if namei == nothing
         error("Name $nm not found")
     else
         coms[namei]

@@ -57,7 +57,7 @@ function _parse_command(rig::AbstractString, chan_name::AbstractString, daq_chan
     return ImagineSignal{vectype}(chan_name, daq_chan_name, rig, seqlist, seqnames, seqs_lookup, cumlen, sampmapper)
 end
 
-function parse_ai(ai_name::AbstractString; imagine_header = splitext(ai_name)[1]*".imagine")
+function parse_ai(ai_name::AbstractString; imagine_header::AbstractString = splitext(ai_name)[1]*".imagine")
     if !isfile(ai_name) && isfile(ai_name*".ai")
         ai_name = ai_name*".ai"
     end
@@ -65,6 +65,10 @@ function parse_ai(ai_name::AbstractString; imagine_header = splitext(ai_name)[1]
         error(".imagine header not found.  Please specify header file name by keyword argument.")
     end
     hdr = ImagineFormat.parse_header(imagine_header)
+    parse_ai(ai_name, hdr)
+end
+
+function parse_ai(ai_name::AbstractString, hdr::Dict{String})
     chns = hdr["channel list"] #note: zero-based, need to add a constant for mapping these indices to DAQ channels
     chns = map(x-> "AI$(x)", chns)
     labs = split(hdr["label list"], "\$")

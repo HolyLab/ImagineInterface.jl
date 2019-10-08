@@ -14,6 +14,9 @@ ao_coms = getoutputs(getanalog(o_coms))
 di_coms = getinputs(getdigital(o_coms))
 ai_coms = getinputs(getanalog(o_coms))
 
+# Check that we can read directly with an ImagineFormat header
+parse_ai(joinpath(e_dir, file_prefix * ".ai"), ImagineFormat.parse_header(joinpath(e_dir, file_prefix * ".imagine")))
+
 #test show
 show(IOBuffer(), first(ai_coms))
 show(IOBuffer(), first(di_coms))
@@ -65,7 +68,7 @@ end
 
 @test length(di_labs) - length(findall(x->x=="unused", di_labs)) == length(di_recs)
 
-nexp_di = count_pulses(getname(di_recs, "camera1 frame monitor")) 
+nexp_di = count_pulses(getname(di_recs, "camera1 frame monitor"))
 nexp_do = count_pulses(getname(do_coms, "camera1"))
 npulse_laser = count_pulses(getname(do_coms, "488nm laser shutter"))
 @test nexp_di == nexp_do == hdr["number of frames requested"]
@@ -85,4 +88,3 @@ end
 @test all(exp_sigs .== load_signals(joinpath(e_dir, file_prefix * ".imagine")))
 @test all(exp_sigs .== load_signals(joinpath(e_dir, file_prefix * ".ai")))
 @test all(exp_sigs .== load_signals(joinpath(e_dir, file_prefix * ".di")))
-

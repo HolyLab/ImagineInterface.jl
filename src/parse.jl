@@ -140,7 +140,14 @@ function parse_ai(A::Matrix, chns, rig, sample_rate::HasInverseTimeUnits)
     parse_ai(A, chns, labels, rig, sample_rate)
 end
 
-function parse_di(di_name::AbstractString; imagine_header = splitext(di_name)[1]*".imagine", load_unused = false)
+"""
+    di = parse_di(diname; imaginename=splitext(diname)[1]*".imagine", kwargs...)
+
+Parse the imagine header and specified `.di` file to extract the signals used to
+represent timing information in an Imagine recording.
+`di` is a vector of memory-mapped signals.
+"""
+function parse_di(di_name::AbstractString; imagine_header = splitext(di_name)[1]*".imagine", kwargs...)
     if !isfile(di_name) && isfile(di_name*".di")
         di_name = di_name*".di"
     end
@@ -148,6 +155,17 @@ function parse_di(di_name::AbstractString; imagine_header = splitext(di_name)[1]
         error(".imagine header not found.  Please specify header file name by keyword argument.")
     end
     hdr = ImagineFormat.parse_header(imagine_header)
+    return parse_di(di_name, hdr; kwargs...)
+end
+
+"""
+    di = parse_di(diname, header::Dict{String}; load_unused=false)
+
+Parse the specified `.di` file to extract the signals used to
+represent timing information in an Imagine recording.
+`di` is a vector of memory-mapped signals. `header` is an Imagine header.
+"""
+function parse_di(di_name::AbstractString, hdr::Dict{String,Any}; load_unused = false)
     chns = hdr["di channel list"] #note: zero-based, need to add a constant for mapping these indices to DAQ channels
     chns = map(x->"P0.$(x)", chns)
     labs = split(hdr["di label list"], "\$")

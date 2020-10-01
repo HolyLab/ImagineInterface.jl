@@ -190,6 +190,12 @@ ocpi2 = rigtemplate("ocpi-2"; sample_rate = 20000*Unitful.s^-1)
 @test length(getpositioners(ocpi2)) == 2
 @test length(getstimuli(ocpi2)) == 15
 
+realm = rigtemplate("realm"; sample_rate = 20000*Unitful.s^-1)
+@test length(getcameras(realm)) == 1
+@test length(getlasers(realm)) == 1
+@test length(getpositioners(realm)) == 1
+@test length(getstimuli(realm)) == 5
+
 @test samprate(ocpi2[1]) == 20000*Unitful.s^-1
 @test all(x->x==0, map(length, ocpi2))
 

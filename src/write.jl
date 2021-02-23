@@ -150,7 +150,7 @@ end
 
 function write_commands(fname::String, coms::Vector{ImagineSignal}, nstacks::NS,
                         nframes_per_stack::NF, exp_time::EXP;
-                        exp_trig_mode = ["External Start";], isbidi=false,
+                        exp_trig_mode = ["External Start";], isbidi=false, vertical_lines=nothing,
                         skip_validation=false) where{NS<:Union{Int, Vector{Int}}, NF<:Union{Int, Vector{Int}}, EXP<:Union{HasTimeUnits, Vector{HasTimeUnits}}}
     @assert splitext(fname)[2] == ".json"
     if isa(exp_trig_mode, AbstractString)
@@ -161,7 +161,7 @@ function write_commands(fname::String, coms::Vector{ImagineSignal}, nstacks::NS,
     if !skip_validation
         print("Validating signals before writing...\n")
         check_cam_meta(coms_used, nstacks, nframes_per_stack, exp_time, exp_trig_mode)
-        validate_all(coms_used; check_is_sufficient = true)
+        validate_all(coms_used; check_is_sufficient = true, vertical_lines=vertical_lines)
         print("...finished validating signals\n")
     end
     which_cams = map(name, getcameras(coms))

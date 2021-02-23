@@ -206,3 +206,46 @@ start_is, stop_is = test_seq2(first_i, samps_off_tol-1, start2start_tol)
 samps = gen_samp_seq(start_is, stop_is, stop_is[end]+1)
 replace!(sigs[1], "test3", samps)
 @test_throws Exception check_laser(sigs[1])
+
+@testset "Reduced frame size" begin
+    μm, s = Unitful.μm, Unitful.s
+    sample_rate = 50000s^-1 #analog output samples per second
+    rig = "realm"
+    realm = rigtemplate(rig; sample_rate = sample_rate)
+    positioners = getpositioners(realm)
+    pos = positioners[1]
+    ############STACK PARAMETERS#################
+    pmin = 0.0*μm #Piezo start position in microns
+    pmax = 200.0*μm #Piezo stop position in microns
+    stack_img_time = 0.26s #Time to complete the imaging sweep with the piezo (remember we also need to reset it to its starting position)
+    reset_time = 0.001s #Time to reset piezo to starting position.  This time plus "stack_img_time" determines how long it takes to complete an entire stack and be ready to start a new stack
+    z_spacing = 3.1μm #The space between slices in the z-stack.
+    z_pad = 1.0μm #Set this greater than 0 if you want to ignore the edges of the positioner sweep (only take slices in a central region)
+
+    hmax, vmax = chip_size(rig)
+    h = 1000 #doesn't matter with current cameras
+    v = 400
+    mx_f = max_framerate(rig, h,v)
+    mn_exp = 1/mx_f #This is the minimum possible exposure time
+    mx_f = max_framerate(rig, hmax, vmax)
+    mx_exp = 1/mx_f
+    exp_time = 0.002s  #Exposure time of the camera. Make sure this is greater than mn_exp and less than mx_exp above
+    flash_frac = 1.1 #fraction of time to keep laser on during exposure.  If you set this greater than 1 then the laser will stay on constantly during the imaging sweep
+
+    d = gen_bidirectional_stack(pmin, pmax, z_spacing, stack_img_time, exp_time, sample_rate, flash_frac; z_pad = z_pad, rig = rig)
+    nframes = d["nframes"] #note that there are twice as many frames as in the unidirectional example because one cycle of the positioner includes two stacks
+
+    #Let's append our newly-created sample vectors to their respective commands in the template
+    append!(pos, "bi_stack_pos", d["positioner"])
+    lasers = getlasers(realm)
+    las1 = lasers[1] #You could also append to any of the other lasers
+    append!(las1, "bi_stack_las1", d["laser"])
+    cams = getcameras(realm)
+    cam1 = cams[1] #You could also append to the other camera
+    append!(cam1, "bi_stack_cam1", d["camera"])
+
+    nstacks = 1
+    fn = tempname() * ".json"
+    write_commands(fn, realm, nstacks, nframes, exp_time; isbidi = true, vertical_lines=v)
+    rm(fn)
+end

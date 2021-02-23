@@ -122,4 +122,6 @@ replicate!(cam1, 9) #appends the current contents of pos 9 times to the end of p
 #In addition to the commands themselves, currently you must provide additional metadata so that the .imagine header gets written correctly during a recording
 nstacks = 10
 write_commands("test.json", ocpi2, nstacks, nframes, exp_time; isbidi = false)
+write_commands("test.json", ocpi2, nstacks, nframes, exp_time; isbidi = false, active_cams_sz=[(h,v)]) # If you want to apply camera capture size
+                    # to `check_camera`, specify `active_cams_sz` arguemnt which shoul be vector of tuple holding active sizes of cameras
 

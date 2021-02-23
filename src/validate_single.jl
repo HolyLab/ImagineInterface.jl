@@ -136,14 +136,17 @@ function check_pulses(sig::ImagineSignal, on_time::HasTimeUnits, off_time::HasTi
     return true 
 end
 
-check_cameras(sigs::AbstractVector{TS}) where TS<:ImagineSignal = map(check_camera, getcameras(getoutputs(sigs)))
+check_cameras(sigs::AbstractVector{TS}; active_cams_sz = default_cams_sz(sigs)) where TS<:ImagineSignal =
+    (length(getcameras(getoutputs(sigs)))==length(active_cams_sz) ||
+         error("length of vector active_cams_sz should be equal to the number of cameras");
+    map((cam,sz)->check_camera(cam,active_cam_sz=sz), getcameras(getoutputs(sigs)),active_cams_sz))
 
 #check framerate, interpulse, intrapulse
 #   the 0->1->0 interval is greater than or equal to CAMERA_ON_TIME
 #   the 1->0->1 interval is greater than or equal to CAMERA_OFF_TIME
 #   the 0->1->0->1 interval is greater than or equal to 1 / the max framerate
 #   max_framerate = max_framerate(rig, chip_size(rig)...)
-function check_camera(cam::ImagineSignal; chip_sz = chip_size(rig_name(cam)))    
+function check_camera(cam::ImagineSignal; active_cam_sz = chip_size(rig_name(cam)))
     if isempty(cam)
         @warn "Signal $(name(cam)) is empty.  Skipping validation."
         return true
@@ -151,7 +154,7 @@ function check_camera(cam::ImagineSignal; chip_sz = chip_size(rig_name(cam)))
     rig = rig_name(cam)
     min_on_dur = CAMERA_ON_TIME[rig]
     min_off_dur = CAMERA_OFF_TIME[rig]
-    max_fr = max_framerate(rig, chip_sz...)
+    max_fr = max_framerate(rig, active_cam_sz...)
     check_pulses(cam, min_on_dur, min_off_dur, max_fr)
 end
 
@@ -174,13 +177,15 @@ function check_laser(las::ImagineSignal)
     check_pulses(las, min_on_dur, min_off_dur, Inf*inv(Unitful.s))
 end
 
-function validate_singles(sigs::AbstractVector{TS}) where TS<:ImagineSignal
+function validate_singles(sigs::AbstractVector{TS}; active_cams_sz = default_cams_sz(sigs)) where TS<:ImagineSignal
     check_piezos(sigs)
-    check_cameras(sigs)
+    check_cameras(sigs; active_cams_sz = active_cams_sz)
     check_lasers(sigs)
 end
 
-function validate_all(sigs::AbstractVector{TS}; check_is_sufficient = true) where TS<:ImagineSignal
+default_cams_sz(sigs) = chip_size(rig_name(getcameras(getoutputs(sigs))))
+function validate_all(sigs::AbstractVector{TS}; check_is_sufficient = true,
+            active_cams_sz = default_cams_sz(sigs)) where TS<:ImagineSignal
     validate_group(sigs; check_is_sufficient = check_is_sufficient)
-    validate_singles(sigs)
+    validate_singles(sigs;  active_cams_sz = active_cams_sz)
 end

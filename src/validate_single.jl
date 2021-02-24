@@ -133,17 +133,21 @@ function check_pulses(sig::ImagineSignal, on_time::HasTimeUnits, off_time::HasTi
             error("The interval between pulse #$rslt start and pulse #$(rslt+1) start of signal $(name(sig)) is too small")
         end
     end
-    return true 
+    return true
 end
 
-check_cameras(sigs::AbstractVector{TS}) where TS<:ImagineSignal = map(check_camera, getcameras(getoutputs(sigs)))
+check_cameras(sigs::AbstractVector{TS}; vertical_lines=nothing) where TS<:ImagineSignal = map(getcameras(getoutputs(sigs))) do cam
+    default_chip_sz = chip_size(rig_name(cam))
+    chip_sz = vertical_lines === nothing ? default_chip_sz : (default_chip_sz[1], vertical_lines)
+    return check_camera(cam; chip_sz=chip_sz)
+end
 
 #check framerate, interpulse, intrapulse
 #   the 0->1->0 interval is greater than or equal to CAMERA_ON_TIME
 #   the 1->0->1 interval is greater than or equal to CAMERA_OFF_TIME
 #   the 0->1->0->1 interval is greater than or equal to 1 / the max framerate
 #   max_framerate = max_framerate(rig, chip_size(rig)...)
-function check_camera(cam::ImagineSignal; chip_sz = chip_size(rig_name(cam)))    
+function check_camera(cam::ImagineSignal; chip_sz = chip_size(rig_name(cam)))
     if isempty(cam)
         @warn "Signal $(name(cam)) is empty.  Skipping validation."
         return true
@@ -174,13 +178,13 @@ function check_laser(las::ImagineSignal)
     check_pulses(las, min_on_dur, min_off_dur, Inf*inv(Unitful.s))
 end
 
-function validate_singles(sigs::AbstractVector{TS}) where TS<:ImagineSignal
+function validate_singles(sigs::AbstractVector{TS}; vertical_lines=nothing) where TS<:ImagineSignal
     check_piezos(sigs)
-    check_cameras(sigs)
+    check_cameras(sigs; vertical_lines=vertical_lines)
     check_lasers(sigs)
 end
 
-function validate_all(sigs::AbstractVector{TS}; check_is_sufficient = true) where TS<:ImagineSignal
+function validate_all(sigs::AbstractVector{TS}; check_is_sufficient = true, vertical_lines=nothing) where TS<:ImagineSignal
     validate_group(sigs; check_is_sufficient = check_is_sufficient)
-    validate_singles(sigs)
+    validate_singles(sigs; vertical_lines=vertical_lines)
 end

@@ -163,7 +163,7 @@ function center(input::ClosedInterval{Int})
     return minimum(input) + halfw
 end
 
-#Return a new "scaled" interval centered on the center of the input and with width equal to frac * width(input) 
+#Return a new "scaled" interval centered on the center of the input and with width equal to frac * width(input)
 function scale(input::ClosedInterval{Int}, frac::Float64)
     halfw = div(width(input),2)
     ctr = center(input)
@@ -180,10 +180,10 @@ function gen_bidirectional_stack(pmin::TL, pmax::TL, z_spacing::TL,
     end
     flash = true
     if flash_frac >= 1.0
-        @warn "las_frac was set greater than 1.0, so keeping laser on throughout the stack"
+        @warn "flash_frac was set greater than 1.0, so keeping laser on throughout the stack"
         flash = false
     elseif flash_frac <= 0
-        error("las_frac must be positive")
+        error("flash_frac must be positive")
     end
 
     pmin = uconvert(Unitful.μm, pmin)
@@ -219,7 +219,7 @@ function gen_bidirectional_stack(pmin::TL, pmax::TL, z_spacing::TL,
     #The extra -1 is needed since the forward direction does not sample the last point (the first index in the reverse direction)
     exp_intervals_back = map(x-> ClosedInterval(length(posfwd)-(maximum(x)+offset_nsamps-2), length(posfwd)-(maximum(x)-flash_nsamps-1)), exp_intervals_fwd)
 #    exp_intervals_back = spaced_intervals(posback, z_spacing, exp_time, sample_rate; delay=0.0*Unitful.s, z_pad = z_pad, alignment=:stop, rig=rig)
-    
+
     if flash
         las_intervals_fwd = map(x-> ClosedInterval(maximum(x)-flash_nsamps+1, maximum(x)), exp_intervals_fwd)
         lasfwd = gen_pulses(nsamps_stack, las_intervals_fwd)
@@ -346,7 +346,7 @@ function gen_unidirectional_stack(pmin::TL, pmax::TL, z_spacing::TL, stack_time:
     posfwd, posreset = gen_sawtooth(pmin, pmax, stack_time, reset_time, sample_rate)
 
     exp_intervals = spaced_intervals(posfwd, z_spacing, exp_time, sample_rate; z_pad = z_pad, alignment=:start, rig=rig)
-    
+
     if flash
         pulse_nsamps = calc_num_samps(flash_frac * exp_time, sample_rate)
         las_intervals = map(x-> ClosedInterval(maximum(x)-pulse_nsamps+1, maximum(x)), exp_intervals)
@@ -384,4 +384,4 @@ function gen_2d_timeseries(position::TL, nframes::Int, exp_time::TT, inter_exp_t
     output = Dict("positioner" => pos, "camera" => cam, "laser" => las)
     return output
 end
- 
+

@@ -111,6 +111,7 @@ end
 daq_channel(com::ImagineSignal) = com.daq_chan_name
 daq_channel_number(com::ImagineSignal) = daq_channel_number(com.daq_chan_name)
 rig_name(com::ImagineSignal) = com.rig_name
+rig_name(com::AbstractArray{T}) where T<:ImagineSignal = rig_name(first(com))
 rawtype(com::ImagineSignal) = rawtype(mapper(com))
 worldtype(com::ImagineSignal) = worldtype(mapper(com))
 sequences(com::ImagineSignal) = com.sequences

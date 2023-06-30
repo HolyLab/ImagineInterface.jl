@@ -32,7 +32,7 @@ flash_frac = 0.1        #fraction of time to keep laser on during exposure.  If 
 
 ############STACK TIMING PARAMETERS#################
 # These timing parameters depend on the specifics of your experiment.
-# You have free control over the recording durations, but the stimulus lead time will depend
+# You have free control over the recording durations, but the stimulus lead time will depend on tubing volume between the autosampler and recording chamber
 
 stimulus_lead_time = 20s            #Interval between injection time and stimulus arrival time (depends on flowrate and tubing volume, so you should measure this for your setup)
 baseline_duration = 10s             #Interval between recording start time and stimulus time (positive if recording starts before stimulus presentation)

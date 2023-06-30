@@ -34,7 +34,7 @@ flash_frac = 0.1        #fraction of time to keep laser on during exposure.  If 
 # These timing parameters depend on the specifics of your experiment.
 # You have free control over the recording durations, but the stimulus lead time will depend
 
-stimulus_lead_time = 2s             #Interval between injection time and stimulus arrival time (depends on flowrate and tubing volume)
+stimulus_lead_time = 20s            #Interval between injection time and stimulus arrival time (depends on flowrate and tubing volume, so you should measure this for your setup)
 baseline_duration = 10s             #Interval between recording start time and stimulus time (positive if recording starts before stimulus presentation)
 stimulus_duration = 20s             #Duration of recording for each trial (after stimulus presentation)
 
@@ -45,7 +45,7 @@ stimulus_duration = 20s             #Duration of recording for each trial (after
 inter_trial_duration = 30s          #Duration of interval between trials
 
 # The total number of recordings to be obtained. This should be the product of the number of stimuli and number of replicates for your experiment
-n_stimuli = 4                               #Number of stimuli to present
+n_stimuli = 2                               #Number of stimuli to present
 n_replicates = 3                            #Number of replicates for each stimulus
 @show n_trials = n_stimuli * n_replicates   #Number of trials to record
 
@@ -100,7 +100,7 @@ replicate!(stim1, n_trials-1)
 @show stim_delay = baseline_duration - stimulus_lead_time
 
 # Pad beginning and end of experiment to account for interval between recording start and injection trigger
-pad_nsamps = Int(stim_delay * sample_rate)
+pad_nsamps = Int(abs(stim_delay) * sample_rate)
 pad_samps = Dict(
     "positioner" => fill(eltype(bidi_samps["positioner"])(pmin), pad_nsamps),
     "laser"      => fill(false, pad_nsamps),

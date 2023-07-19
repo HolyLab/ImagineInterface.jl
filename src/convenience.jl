@@ -21,7 +21,7 @@ finddigital(coms::AbstractVector{T}) where{T<:ImagineSignal} =
     findall(isdigital, coms)
 getdigital(coms::AbstractVector{T}) where{T<:ImagineSignal} =
     view(coms, finddigital(coms))
-isanalog(daq_chan::AbstractString, rig::AbstractString) where{T<:ImagineSignal} =
+isanalog(daq_chan::AbstractString, rig::AbstractString) =
     !isdigital(daq_chan, rig)
 isanalog(com::T) where{T<:ImagineSignal} =
     isanalog(daq_channel(com), rig_name(com))

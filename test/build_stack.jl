@@ -1,6 +1,8 @@
 using ImagineInterface, Unitful, IntervalSets, Statistics
 using Test
 
+ivduration(iv::AbstractInterval{T}) where T<:Integer = maximum(iv) - minimum(iv) + 1
+
 ##################################BIDIRECTIONAL STACK########################################3
 sample_rate = 50000*Unitful.s^-1
 pmin = 0.0*Unitful.μm
@@ -33,9 +35,9 @@ samps_cam_back = gen_pulses(nsamps_stack, exp_intervals_back)
 @test all(map(IntervalSets.width, exp_intervals_fwd) .== 549)
 @test all(map(IntervalSets.width, exp_intervals_back) .== 549)
 #exposure duration
-@test isapprox(IntervalSets.duration(exp_intervals_fwd[1]) / sample_rate, exp_time; atol=1/sample_rate)
+@test isapprox(ivduration(exp_intervals_fwd[1]) / sample_rate, exp_time; atol=1/sample_rate)
 #laser duration
-@test isapprox(IntervalSets.duration(las_intervals_fwd[1]) / sample_rate, flash_frac*exp_time; atol=(1/sample_rate))
+@test isapprox(ivduration(las_intervals_fwd[1]) / sample_rate, flash_frac*exp_time; atol=(1/sample_rate))
 @test posfwd[1] == pmin
 @test posfwd[end] < pmax
 @test posback[1] == pmax
@@ -45,9 +47,9 @@ samps_cam_back = gen_pulses(nsamps_stack, exp_intervals_back)
 nexp = length(exp_intervals_fwd)
 @test nexp == length(exp_intervals_back) == 61
 @test length(find_pulse_starts(samps_cam_fwd)) == nexp
-@test length(find_pulse_stops(samps_cam_fwd)) == nexp 
-@test length(find_pulse_starts(samps_cam_back)) == nexp 
-@test length(find_pulse_stops(samps_cam_back)) == nexp 
+@test length(find_pulse_stops(samps_cam_fwd)) == nexp
+@test length(find_pulse_starts(samps_cam_back)) == nexp
+@test length(find_pulse_stops(samps_cam_back)) == nexp
 #TODO: test padding
 
 d = gen_bidirectional_stack(pmin, pmax, z_spacing, stack_time, exp_time, sample_rate, flash_frac; z_pad = z_pad)

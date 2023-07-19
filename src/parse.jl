@@ -177,7 +177,7 @@ function parse_di(di_name::AbstractString, hdr::Dict{String,Any}; load_unused = 
     end
     for i = 1:length(chns)
         biti = findfirst(x->x==parse(Int, split(chns[i], ".")[2]), hdr["di channel list"])
-        if biti != findfirst(x->x==chns[i], DI_CHANS[rig])
+        if biti != firstfound(x->x==chns[i], DI_CHANS[rig])
             @warn "DI channel list entry #$(biti) found in the .imagine header does not match the expected entry for this rig. Attempting to load anyway, but please report this issue"
         end
     end
@@ -220,7 +220,7 @@ function parse_di(di_name, rig, sample_rate::HasInverseTimeUnits)
     for i = 1:length(insigs)
         sig = insigs[i]
         daq_chan_str = daq_channel(sig)
-        biti = findfirst(x->x==daq_chan_str, DI_CHANS[rig])
+        biti = firstfound(x->x==daq_chan_str, DI_CHANS[rig])
         samps = mappedarray(UInt8, view(A, biti, :)) #feels a bit dishonest to call UInt8 the raw type, but there is no Bit type...
         sampsarr = Array{AbstractVector}(undef, 0)
         push!(sampsarr, samps)
@@ -297,4 +297,13 @@ function load_signals(any_name::AbstractString)
         @warn "Digital input file (with .di extension) was not found in the supplied directory"
     end
     return coms
+end
+
+function firstfound(@nospecialize(predicate), set::OrderedSet)
+    i = 0
+    for item in set
+        i += 1
+        predicate(item) && return i
+    end
+    error("predicate did not match any items in ", set)
 end

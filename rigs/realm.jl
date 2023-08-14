@@ -2,10 +2,10 @@ rig_key = "realm"
 push!(RIGS, rig_key)
 #Mappings from DAQ channel to friendlier default names
 const realm_mappings = Dict("AO0"=>"axial piezo",
-                      "AO1"=>"analogout1",
+                      "AO1"=>"horizontal piezo",
                       "AI0"=>"axial piezo monitor",
-                      "AI1"=>"stimuli",
-                      "AI2"=>"analogin1",
+                      "AI1"=>"horizontal piezo monitor",
+                      "AI2"=>"stimuli",
                       "AI3"=>"analogin2",
                       "AI4"=>"AI4",
                       "AI5"=>"AI5",
@@ -35,8 +35,8 @@ const realm_aochans = map(x->"AO$(x)", 0:1)
 const realm_aichans = map(x->"AI$(x)", 0:15)
 const realm_dochans = map(x->"P0.$(x)", 0:6)
 const realm_dichans = ["P0.7";]
-const realm_pos_ctrl_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["axial piezo"])
-const realm_pos_mon_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["axial piezo monitor"])
+const realm_pos_ctrl_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["axial piezo","horizontal piezo"])
+const realm_pos_mon_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["axial piezo monitor","horizontal piezo monitor"])
 const realm_cam_ctrl_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["camera1"])
 const realm_cam_mon_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["camera1 frame monitor"])
 const realm_laschans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["488nm laser shutter"])

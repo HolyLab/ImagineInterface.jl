@@ -378,11 +378,11 @@ function prepend!(com::ImagineSignal{T}, seqname::AbstractString) where T<:RLEVe
         error("The requested sequence name was not found.  You most first add the sequence with add_sequence!(com, seqname, sequence), or instead you can add it and append it at the same time with append!(com, seqname, sequence)")
     else
         #TODO: run safety checks here
-        #find the length of this sequence and append to cumlength vector
+        #find the length of this sequence and prepend to cumlength vector
         seqi = findfirst(x->x==seqname, sequence_names(com))
-        prepend!(sequence_names(com), [seqname])
+        pushfirst!(sequence_names(com), seqname)
         newseq = sequence_lookup(com)[seqname]
-        prepend!(sequences(com), [newseq])
+        pushfirst!(sequences(com), newseq)
         lseq = 0
         if seqi === nothing #we didn't use this sequence yet
             lseq = sum(map(count, newseq))
@@ -392,7 +392,7 @@ function prepend!(com::ImagineSignal{T}, seqname::AbstractString) where T<:RLEVe
             lseq = cumlength(com)[seqi] - cumlength(com)[seqi-1]
         end
         com.cumlength .+= lseq
-        prepend!(com.cumlength, lseq)
+        pushfirst!(com.cumlength, lseq)
     end
     return com
 end
@@ -408,10 +408,10 @@ function prepend!(com::ImagineSignal{T}, seqname::AbstractString, sequence::T) w
     #TODO: run safety checks here
     @assert full_length(sequence) >= 1
     add_sequence!(com, seqname, sequence)
-    prepend!(sequences(com), [sequence])
-    prepend!(sequence_names(com), [seqname])
+    pushfirst!(sequences(com), [sequence])
+    pushfirst!(sequence_names(com), [seqname])
     com.cumlength .+= full_length(sequence)
-    prepend!(com.cumlength, full_length(sequence))
+    pushfirst!(com.cumlength, full_length(sequence))
     return com
 end
 

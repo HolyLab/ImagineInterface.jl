@@ -9,7 +9,7 @@ import ImagineHardware:samprate
 using AxisArrays
 const axes = Base.axes
 
-import Base: convert, show, length, size, isempty, ==, append!, pop!, empty!, replace!#, scale
+import Base: convert, show, length, size, isempty, ==, append!, prepend!, pop!, empty!, replace!#, scale
 
 using Unitful: μm, s, Hz, V
 

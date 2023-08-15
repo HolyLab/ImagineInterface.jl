@@ -372,6 +372,49 @@ function append!(com::ImagineSignal{T}, seqname::AbstractString, sequence::T) wh
     return com
 end
 
+function prepend!(com::ImagineSignal{T}, seqname::AbstractString) where T<:RLEVector
+    seqdict = sequence_lookup(com)
+    if !haskey(seqdict, seqname)
+        error("The requested sequence name was not found.  You most first add the sequence with add_sequence!(com, seqname, sequence), or instead you can add it and append it at the same time with append!(com, seqname, sequence)")
+    else
+        #TODO: run safety checks here
+        #find the length of this sequence and append to cumlength vector
+        seqi = findfirst(x->x==seqname, sequence_names(com))
+        prepend!(sequence_names(com), [seqname])
+        newseq = sequence_lookup(com)[seqname]
+        prepend!(sequences(com), [newseq])
+        lseq = 0
+        if seqi === nothing #we didn't use this sequence yet
+            lseq = sum(map(count, newseq))
+        elseif seqi == 1
+            lseq = cumlength(com)[1]
+        else
+            lseq = cumlength(com)[seqi] - cumlength(com)[seqi-1]
+        end
+        com.cumlength .+= lseq
+        prepend!(com.cumlength, lseq)
+    end
+    return com
+end
+
+prepend!(com::ImagineSignal{T}, seqlist::V) where {T<:RLEVector, V<:AbstractVector{String}} = foreach(x->prepend!(com,x), seqlist)
+
+function prepend!(com::ImagineSignal{T}, seqname::AbstractString, sequence::AbstractVector{TS}) where {T<:RLEVector,TS}
+    cseq = compress(sequence, mapper(com))
+    return prepend!(com, seqname, cseq)
+end
+
+function prepend!(com::ImagineSignal{T}, seqname::AbstractString, sequence::T) where T<:RLEVector
+    #TODO: run safety checks here
+    @assert full_length(sequence) >= 1
+    add_sequence!(com, seqname, sequence)
+    prepend!(sequences(com), [sequence])
+    prepend!(sequence_names(com), [seqname])
+    com.cumlength .+= full_length(sequence)
+    prepend!(com.cumlength, full_length(sequence))
+    return com
+end
+
 #Repeat the entire sequence currently described by com nreps times
 #(Equivalent to calling append!(com, seqname) nreps times when seqname is the only sequence in com)
 function replicate!(com::ImagineSignal{T}, nreps::Int) where T<:RLEVector

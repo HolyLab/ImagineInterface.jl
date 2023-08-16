@@ -35,13 +35,13 @@ const realm_aochans = map(x->"AO$(x)", 0:1)
 const realm_aichans = map(x->"AI$(x)", 0:15)
 const realm_dochans = map(x->"P0.$(x)", 0:6)
 const realm_dichans = ["P0.7";]
-const realm_pos_ctrl_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["axial piezo","horizontal piezo"])
-const realm_pos_mon_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["axial piezo monitor","horizontal piezo monitor"])
+const realm_pos_ctrl_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["axial piezo", "horizontal piezo"])
+const realm_pos_mon_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["axial piezo monitor", "horizontal piezo monitor"])
 const realm_cam_ctrl_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["camera1"])
 const realm_cam_mon_chans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["camera1 frame monitor"])
 const realm_laschans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["488nm laser shutter"])
 const realm_stimchans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], ["stimulus$x" for x = 1:5])
-const realm_fixed_names = ["axial piezo", "axial piezo monitor", "488nm laser shutter", "camera1", "camera1 frame monitor", "stimuli"]
+const realm_fixed_names = ["axial piezo", "axial piezo monitor", "horizontal piezo", "horizontal piezo monitor", "488nm laser shutter", "camera1", "camera1 frame monitor", "stimuli"]
 const realm_fixed_daqchans = map(x->DEFAULT_NAMES_TO_DAQCHANS[rig_key][x], realm_fixed_names)
 
 AO_CHANS[rig_key] = OrderedSet(realm_aochans)
@@ -69,8 +69,8 @@ LASER_OFF_TIME[rig_key] = 10 * Unitful.ms
 CAMERA_ON_TIME[rig_key] = 19526.0 * Unitful.ns #This is the worst jitter measured with Edge 5.5 and 4.2 cameras, see ImagineInterface issue #18
 CAMERA_OFF_TIME[rig_key] = 19526.0 * Unitful.ns #This is the worst jitter measured with Edge 5.5 and 4.2 cameras, see ImagineInterface issue #18
 
-PIEZO_RANGES[rig_key] = (-400.0μm .. 400.0μm, -10.0V .. 10.0V)
+PIEZO_RANGES[rig_key] = (-32768..32767, -400.0μm .. 400.0μm, -10.0V .. 10.0V)
 PIEZO_MAX_SPEED[rig_key] = 2000*Unitful.μm / Unitful.s
-AO_RANGE[rig_key] = -10.0V .. 10.0V
+AO_RANGE[rig_key] = (-32768..32767, -10.0V .. 10.0V)
 AI_RANGE[rig_key] = AO_RANGE[rig_key] #TODO: make sure this is true.  (true if we are recording -10..10V on analog inputs)
 

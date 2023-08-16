@@ -114,7 +114,7 @@ LASER_OFF_TIME[rig_key] = 9 * Unitful.μs
 CAMERA_ON_TIME[rig_key] = 19526.0 * Unitful.ns #This is the worst jitter measured with Edge 5.5 and 4.2 cameras, see ImagineInterface issue #18
 CAMERA_OFF_TIME[rig_key] = 19526.0 * Unitful.ns #This is the worst jitter measured with Edge 5.5 and 4.2 cameras, see ImagineInterface issue #18
 
-PIEZO_RANGES[rig_key] = (0.0μm .. 800.0μm, 0.0V .. 10.0V)
+PIEZO_RANGES[rig_key] = (0..32767, 0.0μm .. 800.0μm, 0.0V .. 10.0V)
 PIEZO_MAX_SPEED[rig_key] = 2000*Unitful.μm / Unitful.s
-AO_RANGE[rig_key] = -10.0V .. 10.0V
+AO_RANGE[rig_key] = (-32768..32767, -10.0V .. 10.0V)
 AI_RANGE[rig_key] = AO_RANGE[rig_key] #TODO: make sure this is true.  (true if we are recording -10..10V on analog inputs)

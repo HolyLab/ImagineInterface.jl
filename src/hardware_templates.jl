@@ -4,28 +4,28 @@ function default_samplemapper(rig_name::AbstractString, daq_chan_name::String; s
     if isdigital(daq_chan_name, rig_name)
         return ttl_samplemapper(; sample_rate = sample_rate)
     elseif ispos(daq_chan_name, rig_name) || isposmonitor(daq_chan_name, rig_name)
-        return piezo_samplemapper(PIEZO_RANGES[rig_name]...; rawtype = Int16, sample_rate = sample_rate)
+        return piezo_samplemapper(PIEZO_RANGES[rig_name]...; sample_rate = sample_rate)
     elseif isanalog(daq_chan_name, rig_name)
         if isoutput(daq_chan_name, rig_name)
-            return generic_ao_samplemapper(-10.0V..10.0V; rawtype = Int16, sample_rate = sample_rate)
+            return generic_ao_samplemapper(AO_RANGE[rig]...; sample_rate = sample_rate)
         else
-            return generic_ai_samplemapper(-10.0V..10.0V; rawtype = Int16, sample_rate = sample_rate)
+            return generic_ai_samplemapper(AI_RANGE[rig]...; sample_rate = sample_rate)
         end
     else
         error("Unrecognized channel name")
     end
 end
 
-function generic_ao_samplemapper(v::AbstractInterval{TV};
-                                 rawtype=Int16, sample_rate::HasInverseTimeUnits{Int, TU}=10000s^-1) where{TV<:HasVoltageUnits, TU}
-    return SampleMapper(typemin(rawtype), typemax(rawtype), minimum(v), maximum(v), minimum(v), maximum(v), sample_rate)
+function generic_ao_samplemapper(r::AbstractInterval{Traw},v::AbstractInterval{TV};
+                                sample_rate::HasInverseTimeUnits{Int, TU}=10000s^-1) where{Traw<:Integer,TV<:HasVoltageUnits, TU}
+    return SampleMapper(minimum(r), maximum(r), minimum(v), maximum(v), minimum(v), maximum(v), sample_rate)
 end
 
 generic_ai_samplemapper = generic_ao_samplemapper
 
-function piezo_samplemapper(p::AbstractInterval{TL}, v::AbstractInterval{TV};
-                            rawtype=Int16, sample_rate::HasInverseTimeUnits{Int, TU}=10000s^-1) where{TL<:HasLengthUnits,TV<:HasVoltageUnits, TU}
-    return SampleMapper(zero(rawtype), typemax(rawtype), minimum(v), maximum(v), minimum(p), maximum(p), sample_rate)
+function piezo_samplemapper(r::AbstractInterval{Traw},p::AbstractInterval{TL}, v::AbstractInterval{TV};
+                            sample_rate::HasInverseTimeUnits{Int, TU}=10000s^-1) where{Traw<:Integer,TL<:HasLengthUnits,TV<:HasVoltageUnits, TU}
+    return SampleMapper(minimum(r), maximum(r), minimum(v), maximum(v), minimum(p), maximum(p), sample_rate)
 end
 
 function galvo_ctrl_samplemapper(rawtype=Int16, sample_rate::HasInverseTimeUnits{Int, TU}=10000s^-1) where TU
@@ -59,13 +59,13 @@ function rigtemplate(rig::AbstractString; sample_rate::HasInverseTimeUnits{Int,U
     ao_sampmapper = 0
     for c in AO_CHANS[rig]
         if ispos(c, rig)
-            ao_sampmapper = piezo_samplemapper(PIEZO_RANGES[rig]...; rawtype = Int16, sample_rate = sample_rate)
+            ao_sampmapper = piezo_samplemapper(PIEZO_RANGES[rig]...; sample_rate = sample_rate)
         elseif iscam(c, rig) #if using an AO channel to control cameras (not advised, mostly for testing)
             ao_sampmapper = ttl_samplemapper(zero(Int16), ceil(Int16, typemax(Int16)*3.3/10.0); sample_rate = sample_rate)
         elseif isgalvo(c, rig)
             ao_sampmapper = galvo_ctrl_samplemapper(Int16, sample_rate)
         else
-            ao_sampmapper = generic_ao_samplemapper(AO_RANGE[rig]; rawtype = Int16, sample_rate = sample_rate)
+            ao_sampmapper = generic_ao_samplemapper(AO_RANGE[rig]...; sample_rate = sample_rate)
         end
         ao_vectype = RLEVector{rawtype(ao_sampmapper)}
         push!(coms, ImagineSignal{ao_vectype}(name_lookup[c], c, rig, [], String[], shared_dict, Int[], ao_sampmapper))
@@ -82,13 +82,13 @@ function rigtemplate(rig::AbstractString; sample_rate::HasInverseTimeUnits{Int,U
     ai_sampmapper = 0
     for c in AI_CHANS[rig]
         if isposmonitor(c, rig)
-            ai_sampmapper = piezo_samplemapper(PIEZO_RANGES[rig]...; rawtype = Int16, sample_rate = sample_rate)
+            ai_sampmapper = piezo_samplemapper(PIEZO_RANGES[rig]...; sample_rate = sample_rate)
         elseif iscammonitor(c, rig) #If using an AI channel for TTL camera inputs
             ai_sampmapper = ttl_samplemapper(zero(Int16), ceil(Int16, typemax(Int16)*3.3/10.0); sample_rate = sample_rate)
         elseif isgalvomonitor(c, rig)
             ai_sampmapper = galvo_mon_samplemapper(Int16, sample_rate)
         else
-            ai_sampmapper = generic_ai_samplemapper(AI_RANGE[rig]; rawtype = Int16, sample_rate = sample_rate)
+            ai_sampmapper = generic_ai_samplemapper(AI_RANGE[rig]...; sample_rate = sample_rate)
         end
         ai_vectype = Vector{rawtype(ai_sampmapper)}
         push!(coms, ImagineSignal{ai_vectype}(name_lookup[c], c, rig, [], String[], shared_dict, Int[], ai_sampmapper))

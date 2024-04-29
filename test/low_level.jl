@@ -293,6 +293,20 @@ append!(pos, "ramp_up2") #append existing, not the first sequence
 @test length(pos) == lpos + 10
 @test all(get_samples(pos, "ramp_up2") .== get_samples(pos)[lpos+6:end])
 
+#prepend!
+empty!(pos; clear_library=true)
+newdat = Unitful.μm * [0.0:0.8:800.0...]
+append!(pos, "ramp_up", newdat)
+stationarydat = Unitful.μm * zeros(50)
+prepend!(pos, "stationary", stationarydat)
+@test get_samples(pos,1,length(stationarydat)) == stationarydat
+prepend!(pos, "stationary")
+@test get_samples(pos,1,2*length(stationarydat)) == [stationarydat..., stationarydat...]
+dat = get_samples(pos,2*length(stationarydat)+1,length(pos))
+@test dat[1] == mapper(pos).worldmin
+@test dat[end] == mapper(pos).worldmax
+all([dat[i] > dat[i-1] for i in 2:length(dat)])
+
 #Test metadata retrieval functions
 cs2 = chip_size("ocpi-2")
 cs1 = chip_size("ocpi-1")

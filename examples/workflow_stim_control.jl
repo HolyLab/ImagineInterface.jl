@@ -50,15 +50,15 @@ n_replicates = 3                            #Number of replicates for each stimu
 @show n_trials = n_stimuli * n_replicates   #Number of trials to record
 
 ############STACK GENERATION EXAMPLE#################
-# Bidirectional sweep waveforms
-bidi_samps = gen_bidirectional_stack(pmin, pmax, z_spacing, stack_img_time, exp_time, sample_rate, flash_frac; z_pad = z_pad)
-append!(pos, "bidi_stack_pos", bidi_samps["positioner"])
-append!(las1, "bidi_stack_las1", bidi_samps["laser"])
-append!(cam1, "bidi_stack_cam1", bidi_samps["camera"]);
-sweep_nframes = bidi_samps["nframes"]; #store this for later
+# unidirectional sweep waveforms
+unidi_samps = gen_unidirectional_stack(pmin, pmax, z_spacing, stack_img_time, reset_time, exp_time, sample_rate, flash_frac; z_pad = z_pad)
+append!(pos, "unidi_stack_pos", unidi_samps["positioner"])
+append!(las1, "unidi_stack_las1", unidi_samps["laser"])
+append!(cam1, "unidi_stack_cam1", unidi_samps["camera"]);
+sweep_nframes = unidi_samps["nframes"]; #store this for later
 
-# Repeat the bidirectional waveform enough times to achieve the desired recording duration
-@show sweeps_per_stim = Int((total_recording_duration / stack_img_time) / 2) # divide by 2 because we're doing a bidirectional sweep
+# Repeat the unidirectional waveform enough times to achieve the desired recording duration
+@show sweeps_per_stim = Int(ceil(total_recording_duration / (stack_img_time + reset_time)))
 replicate!(pos, (sweeps_per_stim-1))    
 replicate!(las1, (sweeps_per_stim-1))
 replicate!(cam1, (sweeps_per_stim-1))
@@ -66,7 +66,7 @@ replicate!(cam1, (sweeps_per_stim-1))
 # inter-stimulus rest waveforms
 wait_nsamps = inter_trial_duration * sample_rate
 wait_samps = Dict(
-    "positioner" => fill(eltype(bidi_samps["positioner"])(pmin), wait_nsamps),
+    "positioner" => fill(eltype(unidi_samps["positioner"])(pmin), wait_nsamps),
     "laser"      => fill(false, wait_nsamps),
     "camera"     => fill(false, wait_nsamps)
 )
@@ -77,9 +77,9 @@ append!(cam1, "wait_stack_cam1", wait_samps["camera"]);
 # We now have, for the positioner, camera, and laser traces, a waveform for recording a single trial
 
 # Injection trigger signal (true = on, false = off). The autosampler triggers an injection upon the switch to an "on" signal
-stim_on_nsamps = Int(stimulus_duration * sample_rate)   #Number of samples for the "on" signal
+stim_on_nsamps = Int(ceil(stimulus_duration * sample_rate))   #Number of samples for the "on" signal
 stim_on_samps = fill(true, stim_on_nsamps)
-stim_off_nsamps = Int((total_recording_duration + inter_trial_duration - stimulus_duration) * sample_rate)
+stim_off_nsamps = Int(ceil((total_recording_duration + inter_trial_duration - stimulus_duration) * sample_rate))
 stim_off_samps = fill(false, stim_off_nsamps)
 
 stim1 = getstimuli(ocpi2)[1]
@@ -102,7 +102,7 @@ replicate!(stim1, n_trials-1)
 # Pad beginning and end of experiment to account for interval between recording start and injection trigger
 pad_nsamps = Int(abs(stim_delay) * sample_rate)
 pad_samps = Dict(
-    "positioner" => fill(eltype(bidi_samps["positioner"])(pmin), pad_nsamps),
+    "positioner" => fill(eltype(unidi_samps["positioner"])(pmin), pad_nsamps),
     "laser"      => fill(false, pad_nsamps),
     "camera"     => fill(false, pad_nsamps),
     "stimulus"   => fill(false, pad_nsamps)
@@ -127,6 +127,6 @@ end
 
 # save output
 fname = "stimulus_control_example.json"
-nstacks = sweeps_per_stim * n_trials * 2 
-nframes_per_stack = Int(sweep_nframes / 2)
-write_commands(fname, ocpi2, nstacks, nframes_per_stack, exp_time; isbidi = true)
+nstacks = sweeps_per_stim * n_trials
+nframes_per_stack = Int(sweep_nframes)
+write_commands(fname, ocpi2, nstacks, nframes_per_stack, exp_time; isbidi = false)

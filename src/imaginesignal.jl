@@ -408,8 +408,8 @@ function prepend!(com::ImagineSignal{T}, seqname::AbstractString, sequence::T) w
     #TODO: run safety checks here
     @assert full_length(sequence) >= 1
     add_sequence!(com, seqname, sequence)
-    pushfirst!(sequences(com), [sequence])
-    pushfirst!(sequence_names(com), [seqname])
+    pushfirst!(sequences(com), sequence)
+    pushfirst!(sequence_names(com), seqname)
     com.cumlength .+= full_length(sequence)
     pushfirst!(com.cumlength, full_length(sequence))
     return com

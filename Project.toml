@@ -20,7 +20,7 @@ Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
 [compat]
 AxisArrays = "0.4"
-DSP = "0.6, 0.7"
+DSP = "0.6, 0.7, 0.8"
 DataStructures = "0.17, 0.18"
 ImagineFormat = "1"
 ImagineHardware = "0.0.1"

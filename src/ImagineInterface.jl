@@ -7,6 +7,7 @@ using MappedArrays, IntervalSets, DataStructures, DSP
 using ImagineFormat, ImagineHardware
 import ImagineHardware:samprate
 using AxisArrays
+using DSP.Filters: normalize_freq
 const axes = Base.axes
 
 import Base: convert, show, length, size, isempty, ==, append!, prepend!, pop!, empty!, replace!#, scale

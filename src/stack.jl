@@ -7,7 +7,7 @@ function apply_lp(mod_samps::AbstractVector, sampr::HasInverseTimeUnits, cutoff:
     mod_samps3 = repeat(mod_samps, 11)
     fs = ustrip(uconvert(Unitful.Hz, sampr))
     cutoff = ustrip(uconvert(Unitful.Hz, cutoff))
-    responsetype = Lowpass(cutoff; fs=fs)
+    responsetype = Lowpass(normalize_freq(cutoff, fs))
     designmethod = Butterworth(4)
     filtd = filtfilt(digitalfilter(responsetype, designmethod), ustrip.(mod_samps3)).*unit(mod_samps[1])
     return filtd[5*length(mod_samps)+1:(6*length(mod_samps))]

@@ -16,16 +16,16 @@ function default_samplemapper(rig::AbstractString, daq_chan_name::String; sample
     end
 end
 
-function generic_ao_samplemapper(r::AbstractInterval{Traw},v::AbstractInterval{TV};
+function generic_ao_samplemapper(r::AbstractInterval{Traw},v::AbstractInterval{TV}; rawtype=Int16,
                                 sample_rate::HasInverseTimeUnits{Int, TU}=10000s^-1) where{Traw<:Integer,TV<:HasVoltageUnits, TU}
-    return SampleMapper(minimum(r), maximum(r), minimum(v), maximum(v), minimum(v), maximum(v), sample_rate)
+    return SampleMapper(rawtype(minimum(r)), rawtype(maximum(r)), minimum(v), maximum(v), minimum(v), maximum(v), sample_rate)
 end
 
 generic_ai_samplemapper = generic_ao_samplemapper
 
-function piezo_samplemapper(r::AbstractInterval{Traw},p::AbstractInterval{TL}, v::AbstractInterval{TV};
+function piezo_samplemapper(r::AbstractInterval{Traw},p::AbstractInterval{TL}, v::AbstractInterval{TV}; rawtype=Int16,
                             sample_rate::HasInverseTimeUnits{Int, TU}=10000s^-1) where{Traw<:Integer,TL<:HasLengthUnits,TV<:HasVoltageUnits, TU}
-    return SampleMapper(minimum(r), maximum(r), minimum(v), maximum(v), minimum(p), maximum(p), sample_rate)
+    return SampleMapper(rawtype(minimum(r)), rawtype(maximum(r)), minimum(v), maximum(v), minimum(p), maximum(p), sample_rate)
 end
 
 function galvo_ctrl_samplemapper(rawtype=Int16, sample_rate::HasInverseTimeUnits{Int, TU}=10000s^-1) where TU

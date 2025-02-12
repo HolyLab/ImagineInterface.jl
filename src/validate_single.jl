@@ -26,7 +26,7 @@ function check_piezo(pos::ImagineSignal; window_sz = 100, val_state::ValidationS
     max_sp = PIEZO_MAX_SPEED[rig_name(pos)]
     window_dur = window_sz / samprate(pos)
     max_dist = max_sp * window_dur #length units
-    max_dist_raw = ceil(Int, (max_dist/width(interval_world(pos))) * width(interval_raw(pos)))
+    max_dist_raw = ceil(Int, (max_dist/width(interval_world(pos))) * width(convert(Int64,interval_raw(pos))))
     val_func = (samps, win_sz) -> check_max_speed(samps, max_dist_raw, win_sz)
     if length(pos) < window_sz #should this throw an error?
         @warn "Insufficient samples to check this signal with a window size setting of $window_sz"
@@ -38,6 +38,12 @@ function check_piezo(pos::ImagineSignal; window_sz = 100, val_state::ValidationS
         end
     end
     return val_state
+end
+
+function convert(::Type{T1}, i::AbstractInterval{T2}) where {T1,T2}
+    l = convert(T1,i.left)
+    r = convert(T1,i.right)
+    Interval{:closed,:closed,T1}(l,r)
 end
 
 function check_max_speed(raw_samps::Vector, raw_change::Int, in_n_samps::Int)

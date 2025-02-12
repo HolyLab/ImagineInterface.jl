@@ -217,6 +217,8 @@ replace!(sigs[1], "test3", samps)
     ############STACK PARAMETERS#################
     pmin = 0.0*μm #Piezo start position in microns
     pmax = 200.0*μm #Piezo stop position in microns
+    pms = ImagineInterface.PIEZO_MAX_SPEED[rig]
+    mn_stack_img_time = abs(pmax - pmin)/pms
     stack_img_time = 0.26s #Time to complete the imaging sweep with the piezo (remember we also need to reset it to its starting position)
     reset_time = 0.001s #Time to reset piezo to starting position.  This time plus "stack_img_time" determines how long it takes to complete an entire stack and be ready to start a new stack
     z_spacing = 3.1μm #The space between slices in the z-stack.
